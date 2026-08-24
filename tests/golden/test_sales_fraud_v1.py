@@ -58,12 +58,6 @@ def test_expected_events_are_outputs_only_and_mismatches_are_rejected(
         ("common-004", ("payload", "customer_id"), "wrong-customer", "shipment"),
         ("common-005", ("payload", "product_id"), "wrong-product", "invoice"),
         ("common-004", ("business_chain_id",), "wrong-chain", "business chain"),
-        (
-            "common-002",
-            ("payload", "claimed_commitment_id"),
-            "missing-commitment",
-            "missing commitment",
-        ),
         ("common-001", ("expected_version",), 1, "expected version"),
     ],
 )

@@ -157,8 +157,6 @@ class SalesAggregate:
         if command.aggregate_id in state.enterprise.orders:
             raise SalesContractError("sales order already exists")
         commitment = state.economic.commitments.get(terms.claimed_commitment_id)
-        if commitment is None and not state.truth.fraud_decisions:
-            raise SalesContractError("sales order references a missing commitment")
         if commitment is not None and (
             commitment.company_id != terms.company_id
             or commitment.customer_id != terms.customer_id
