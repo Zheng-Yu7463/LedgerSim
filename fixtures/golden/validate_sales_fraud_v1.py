@@ -123,20 +123,43 @@ def validate_references_and_uniqueness(fixture: dict) -> None:
     journal_line_ids = [
         line["line_id"] for journal in fixture["journals"] for line in journal["lines"]
     ]
-    case_keys = [journal["accounting_case_key"] for journal in fixture["journals"]]
-    case_keys.extend(case["accounting_case_key"] for case in fixture["pending_cases"])
+    case_roles = [
+        (journal["accounting_case_key"], journal["journal_role"]) for journal in fixture["journals"]
+    ]
+    case_roles.extend((case["accounting_case_key"], "pending") for case in fixture["pending_cases"])
 
     require_unique(command_ids, "command_id")
     require_unique(event_ids, "event_id")
     require_unique(journal_ids, "journal_id")
     require_unique(journal_line_ids, "journal line_id")
-    require_unique(case_keys, "accounting_case_key")
+    require_unique(case_roles, "accounting case role")
 
     event_id_set = set(event_ids)
     for journal in fixture["journals"]:
         missing_inputs = set(journal["input_event_ids"]) - event_id_set
         if missing_inputs:
             raise AssertionError(f"journal has missing input events: {sorted(missing_inputs)}")
+
+    journals_by_id = {journal["journal_id"]: journal for journal in fixture["journals"]}
+    reversed_originals = []
+    for journal in fixture["journals"]:
+        original_id = journal["reverses_journal_id"]
+        if journal["journal_role"] == "recognition":
+            if original_id is not None:
+                raise AssertionError("recognition journal cannot reverse another journal")
+            continue
+        if original_id not in journals_by_id:
+            raise AssertionError("reversal journal references a missing original journal")
+        original = journals_by_id[original_id]
+        if original["journal_role"] != "recognition":
+            raise AssertionError("reversal journal must reference a recognition journal")
+        if (
+            original["accounting_case_key"] != journal["accounting_case_key"]
+            or original["ledger_type"] != journal["ledger_type"]
+        ):
+            raise AssertionError("reversal and original journal contracts differ")
+        reversed_originals.append(original_id)
+    require_unique(reversed_originals, "reversed original journal")
 
     artifact_ids = event_id_set | set(journal_ids) | set(journal_line_ids)
     artifact_ids |= {item["object_id"] for item in fixture["misstatements"]}
@@ -245,6 +268,8 @@ def validate_accounting_digests_and_permutations(fixture: dict) -> None:
 
     for journal in journals.values():
         rule_version = journal["accounting_case_key"].split("|")[3]
+        if journal["journal_role"] == "reversal":
+            rule_version = f"{rule_version}:reversal_v1"
         content = {
             "accounting_date": journal["accounting_date"],
             "accounting_period": journal["accounting_date"][:7],

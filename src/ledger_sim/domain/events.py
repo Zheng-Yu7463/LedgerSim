@@ -6,9 +6,11 @@ from dataclasses import dataclass, fields
 from typing import Any
 
 from ledger_sim.domain.values import (
+    BusinessDate,
     DomainId,
     Instant,
-    Money,
+    NonNegativeMoney,
+    PositiveMoney,
     Quantity,
     UnitCost,
     UnitPrice,
@@ -23,7 +25,7 @@ class CustomerCommitmentEstablished:
     customer_id: DomainId
     product_id: DomainId
     quantity: Quantity
-    fixed_consideration: Money
+    fixed_consideration: PositiveMoney
     currency: str
     delivery_term: str
     expires_at: Instant
@@ -73,7 +75,7 @@ class SettlementRightEstablished:
     customer_id: DomainId
     product_id: DomainId
     quantity: Quantity
-    fixed_consideration: Money
+    fixed_consideration: PositiveMoney
     currency: str
 
 
@@ -97,10 +99,10 @@ class SalesInvoiceIssued:
     product_id: DomainId
     quantity: Quantity
     unit_price: UnitPrice
-    net_amount: Money
-    tax_amount: Money
+    net_amount: PositiveMoney
+    tax_amount: NonNegativeMoney
     currency: str
-    invoice_date: str
+    invoice_date: BusinessDate
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,7 +111,7 @@ class CustomerPaymentReceived:
     settlement_right_id: DomainId
     settlement_right_event_id: DomainId
     bank_account_id: DomainId
-    amount: Money
+    amount: PositiveMoney
     currency: str
 
 
@@ -118,7 +120,7 @@ class CustomerReceiptRecorded:
     business_chain_id: DomainId
     invoice_id: DomainId
     bank_account_id: DomainId
-    amount: Money
+    amount: PositiveMoney
     currency: str
 
 
@@ -131,7 +133,7 @@ class JournalPosted:
 
 @dataclass(frozen=True, slots=True)
 class FraudDecisionRecorded:
-    target_amount: Money
+    target_amount: PositiveMoney
     target_period: str
 
 
@@ -162,7 +164,17 @@ def event_type(payload: EventPayload) -> str:
 
 
 def _primitive(value: Any) -> Any:
-    if isinstance(value, DomainId | Instant | Money | Quantity | UnitCost | UnitPrice):
+    if isinstance(
+        value,
+        BusinessDate
+        | DomainId
+        | Instant
+        | NonNegativeMoney
+        | PositiveMoney
+        | Quantity
+        | UnitCost
+        | UnitPrice,
+    ):
         return str(value)
     if hasattr(value, "__dataclass_fields__"):
         return {field.name: _primitive(getattr(value, field.name)) for field in fields(value)}

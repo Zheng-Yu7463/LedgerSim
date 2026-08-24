@@ -29,7 +29,6 @@ def request_fingerprint(command: Command) -> str:
     return hashlib.sha256(canonical_request(command)).hexdigest()
 
 
-
 @dataclass(frozen=True, slots=True)
 class RegisteredResult[ResultT]:
     fingerprint: str

@@ -31,8 +31,10 @@ from ledger_sim.domain.events import (
 )
 from ledger_sim.domain.state import FourLayerState
 from ledger_sim.domain.values import (
+    BusinessCalendar,
     DomainId,
-    Money,
+    NonNegativeMoney,
+    SignedMoney,
     UnitCost,
     deterministic_id,
 )
@@ -51,8 +53,13 @@ class SalesPolicy:
 
 
 class SalesAggregate:
-    def __init__(self, policy: SalesPolicy) -> None:
+    def __init__(
+        self,
+        policy: SalesPolicy,
+        calendar: BusinessCalendar | None = None,
+    ) -> None:
         self.policy = policy
+        self.calendar = calendar or BusinessCalendar()
 
     def decide(self, command: Command, state: FourLayerState) -> tuple[EventDraft, ...]:
         actual_version = state.version_of(command.aggregate_id)
@@ -119,8 +126,6 @@ class SalesAggregate:
             raise SalesContractError("customer commitment already exists")
         if terms.delivery_term != "dispatch_point":
             raise SalesContractError("unsupported delivery term")
-        if terms.fixed_consideration <= Money.zero():
-            raise SalesContractError("consideration must be positive")
         if command.requested_at >= terms.expires_at:
             raise SalesContractError("commitment must expire after establishment")
         return (
@@ -362,7 +367,12 @@ class SalesAggregate:
             raise SalesContractError("invoice differs from its sales order")
         if terms.net_amount != terms.unit_price.total(terms.quantity):
             raise SalesContractError("invoice amount differs from quantity times unit price")
-        if terms.tax_amount != Money.zero():
+        shipment_date = self.calendar.date_of(shipment.claimed_effective_at)
+        if terms.invoice_date != shipment_date:
+            raise SalesContractError(
+                "invoice and shipment must use the same Shanghai business date"
+            )
+        if terms.tax_amount != NonNegativeMoney.zero():
             raise SalesContractError("Phase 1A tax amount must be zero")
         return (
             EventDraft(
@@ -377,7 +387,7 @@ class SalesAggregate:
                     terms.net_amount,
                     terms.tax_amount,
                     terms.currency,
-                    terms.invoice_date.isoformat(),
+                    terms.invoice_date,
                 ),
             ),
         )
@@ -392,7 +402,7 @@ class SalesAggregate:
         right = state.economic.settlement_rights.get(terms.settlement_right_id)
         if right is None or right.business_chain_id != chain_id:
             raise SalesContractError("payment references a missing settlement right")
-        if terms.currency != right.currency or terms.amount > right.outstanding:
+        if terms.currency != right.currency or terms.amount.amount > right.outstanding.amount:
             raise SalesContractError("payment exceeds or differs from settlement right")
         return (
             EventDraft(
@@ -418,7 +428,7 @@ class SalesAggregate:
         invoice = state.enterprise.invoices.get(terms.invoice_id)
         if invoice is None or invoice.business_chain_id != chain_id:
             raise SalesContractError("receipt references a missing invoice")
-        if terms.currency != invoice.currency or terms.amount > invoice.outstanding:
+        if terms.currency != invoice.currency or terms.amount.amount > invoice.outstanding.amount:
             raise SalesContractError("receipt exceeds or differs from invoice")
         return (
             EventDraft(
@@ -440,7 +450,7 @@ class SalesAggregate:
         return command.business_chain_id
 
     @staticmethod
-    def _unit_cost(inventory: Money, quantity: Decimal) -> UnitCost:
+    def _unit_cost(inventory: SignedMoney, quantity: Decimal) -> UnitCost:
         if quantity <= 0:
             raise SalesContractError("cannot derive cost from empty inventory")
         return UnitCost.parse(inventory.amount / quantity)

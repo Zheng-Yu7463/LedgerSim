@@ -24,9 +24,11 @@ from ledger_sim.domain.events import (
 from ledger_sim.domain.values import (
     DomainId,
     Instant,
-    Money,
+    NonNegativeMoney,
+    PositiveMoney,
     Quantity,
     QuantityBalance,
+    SignedMoney,
     UnitPrice,
 )
 
@@ -45,7 +47,7 @@ class CustomerCommitment:
     customer_id: DomainId
     product_id: DomainId
     quantity: Quantity
-    fixed_consideration: Money
+    fixed_consideration: PositiveMoney
     currency: str
     established_at: Instant
     expires_at: Instant
@@ -71,6 +73,7 @@ class ShipmentRecord:
     customer_id: DomainId
     product_id: DomainId
     quantity: Quantity
+    claimed_effective_at: Instant
 
 
 @dataclass(slots=True)
@@ -81,9 +84,9 @@ class SalesInvoice:
     customer_id: DomainId
     product_id: DomainId
     quantity: Quantity
-    net_amount: Money
+    net_amount: PositiveMoney
     currency: str
-    outstanding: Money
+    outstanding: NonNegativeMoney
 
 
 @dataclass(slots=True)
@@ -93,20 +96,20 @@ class SettlementRight:
     business_chain_id: DomainId
     customer_id: DomainId
     product_id: DomainId
-    amount: Money
+    amount: PositiveMoney
     currency: str
-    outstanding: Money
+    outstanding: NonNegativeMoney
 
 
 @dataclass(slots=True)
 class LedgerBalances:
-    bank: Money
-    accounts_receivable: Money
-    inventory: Money
-    paid_in_capital: Money
-    sales_revenue: Money
-    cost_of_goods_sold: Money
-    profit: Money
+    bank: SignedMoney
+    accounts_receivable: SignedMoney
+    inventory: SignedMoney
+    paid_in_capital: SignedMoney
+    sales_revenue: SignedMoney
+    cost_of_goods_sold: SignedMoney
+    profit: SignedMoney
 
     def apply(self, journal: Journal) -> None:
         normal_balance = {
@@ -122,9 +125,9 @@ class LedgerBalances:
                 direction = normal_balance[line.account]
             except KeyError as error:
                 raise StateContractError(f"unknown account: {line.account}") from error
-            effect = line.debit_amount - line.credit_amount
+            effect = line.debit_amount.as_signed() - line.credit_amount.as_signed()
             if direction == "credit":
-                effect = Money.zero() - effect
+                effect = SignedMoney.zero() - effect
             setattr(self, line.account, getattr(self, line.account) + effect)
         self.profit = self.sales_revenue - self.cost_of_goods_sold
 
@@ -142,20 +145,20 @@ class LedgerBalances:
     @classmethod
     def from_fixture(cls, raw: Mapping[str, Any]) -> LedgerBalances:
         return cls(
-            bank=Money.parse(str(raw["bank"])),
-            accounts_receivable=Money.parse(str(raw["accounts_receivable"])),
-            inventory=Money.parse(str(raw["inventory"])),
-            paid_in_capital=Money.parse(str(raw["paid_in_capital"])),
-            sales_revenue=Money.parse(str(raw["sales_revenue"])),
-            cost_of_goods_sold=Money.parse(str(raw["cost_of_goods_sold"])),
-            profit=Money.parse(str(raw["profit"])),
+            bank=SignedMoney.parse(str(raw["bank"])),
+            accounts_receivable=SignedMoney.parse(str(raw["accounts_receivable"])),
+            inventory=SignedMoney.parse(str(raw["inventory"])),
+            paid_in_capital=SignedMoney.parse(str(raw["paid_in_capital"])),
+            sales_revenue=SignedMoney.parse(str(raw["sales_revenue"])),
+            cost_of_goods_sold=SignedMoney.parse(str(raw["cost_of_goods_sold"])),
+            profit=SignedMoney.parse(str(raw["profit"])),
         )
 
 
 @dataclass(slots=True)
 class EconomicState:
     physical_inventory_quantity: QuantityBalance
-    bank: Money
+    bank: SignedMoney
     commitments: dict[DomainId, CustomerCommitment] = field(default_factory=dict)
     settlement_rights: dict[DomainId, SettlementRight] = field(default_factory=dict)
 
@@ -188,7 +191,7 @@ class FourLayerState:
         state = cls(
             economic=EconomicState(
                 QuantityBalance.parse(str(opening["physical_inventory_quantity"])),
-                Money.parse(str(opening["normative"]["bank"])),
+                SignedMoney.parse(str(opening["normative"]["bank"])),
             ),
             enterprise=EnterpriseState(
                 QuantityBalance.parse(str(opening["recorded_inventory_quantity"]))
@@ -284,7 +287,7 @@ class EventReducer:
                 product_id=payload.product_id,
                 amount=payload.fixed_consideration,
                 currency=payload.currency,
-                outstanding=payload.fixed_consideration,
+                outstanding=payload.fixed_consideration.as_non_negative(),
             )
         elif isinstance(payload, ShipmentRecordAccepted):
             state.enterprise.shipments[event.aggregate_id] = ShipmentRecord(
@@ -294,6 +297,7 @@ class EventReducer:
                 customer_id=payload.customer_id,
                 product_id=payload.product_id,
                 quantity=payload.quantity,
+                claimed_effective_at=payload.claimed_effective_at,
             )
             state.enterprise.recorded_inventory_quantity = (
                 state.enterprise.recorded_inventory_quantity.subtract(payload.quantity)
@@ -308,17 +312,17 @@ class EventReducer:
                 quantity=payload.quantity,
                 net_amount=payload.net_amount,
                 currency=payload.currency,
-                outstanding=payload.net_amount,
+                outstanding=payload.net_amount.as_non_negative(),
             )
         elif isinstance(payload, CustomerPaymentReceived):
             right = state.economic.settlement_rights[payload.settlement_right_id]
-            right.outstanding = right.outstanding - payload.amount
-            state.economic.bank = state.economic.bank + payload.amount
-            if right.outstanding == Money.zero():
+            right.outstanding = right.outstanding.subtract(payload.amount)
+            state.economic.bank = state.economic.bank.add_amount(payload.amount)
+            if right.outstanding == NonNegativeMoney.zero():
                 del state.economic.settlement_rights[payload.settlement_right_id]
         elif isinstance(payload, CustomerReceiptRecorded):
             invoice = state.enterprise.invoices[payload.invoice_id]
-            invoice.outstanding = invoice.outstanding - payload.amount
+            invoice.outstanding = invoice.outstanding.subtract(payload.amount)
             state.enterprise.receipts.append(event.aggregate_id)
         elif isinstance(payload, JournalPosted):
             try:

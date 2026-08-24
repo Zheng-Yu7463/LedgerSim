@@ -109,11 +109,20 @@ class AccountingCase:
         self.status = AccountingCaseStatus.POSTED
         return True
 
-    def reverse(self, reversal_journal_id: DomainId) -> bool:
+    def reverse(
+        self,
+        original_journal_id: DomainId,
+        reversal_journal_id: DomainId,
+    ) -> bool:
         if self.status is AccountingCaseStatus.PENDING:
             raise AccountingCaseError("cannot reverse a pending accounting case")
         if self.status is AccountingCaseStatus.REVERSED:
             raise AccountingCaseError("AccountingCaseAlreadyReversed")
+        if self.posted_journal_id != original_journal_id:
+            raise AccountingCaseError("reversal does not reference the posted journal")
+        expected_reversal_id = deterministic_id("journal", self.key, "reversal")
+        if reversal_journal_id != expected_reversal_id:
+            raise AccountingCaseError("reversal journal ID is not deterministic")
         self.reversal_journal_id = reversal_journal_id
         self.status = AccountingCaseStatus.REVERSED
         return True

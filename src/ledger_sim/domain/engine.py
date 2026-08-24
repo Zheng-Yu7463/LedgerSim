@@ -11,7 +11,7 @@ from ledger_sim.domain.events import DomainEvent, EventDraft, envelope_event
 from ledger_sim.domain.idempotency import IdempotencyRegistry
 from ledger_sim.domain.sales import SalesAggregate, SalesPolicy
 from ledger_sim.domain.state import EventReducer, FourLayerState
-from ledger_sim.domain.values import DomainId
+from ledger_sim.domain.values import DomainId, Instant
 
 
 class EngineContractError(ValueError):
@@ -23,6 +23,28 @@ class ExecutionResult:
     command_id: DomainId
     events: tuple[DomainEvent, ...]
     journals: tuple[Journal, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReversalRequest:
+    action_id: DomainId
+    run_id: DomainId
+    branch_id: DomainId
+    actor_id: DomainId
+    correlation_id: DomainId
+    committed_at: Instant
+    accounting_case_key: str
+
+    @property
+    def command_id(self) -> DomainId:
+        return self.action_id
+
+    @property
+    def requested_at(self) -> Instant:
+        return self.committed_at
+
+
+type EventCause = Command | ReversalRequest
 
 
 @dataclass(slots=True)
@@ -80,6 +102,7 @@ class DomainEngine:
         self.sales = SalesAggregate(sales_policy)
         self._branches = {root_branch_id: BranchRuntime(copy.deepcopy(opening_state))}
         self._idempotency: IdempotencyRegistry[ExecutionResult] = IdempotencyRegistry()
+        self._sealed_branches: set[DomainId] = set()
 
     def handle(self, command: Command) -> ExecutionResult:
         if command.run_id != self.run_id:
@@ -87,6 +110,7 @@ class DomainEngine:
         previous = self._idempotency.find(command)
         if previous is not None:
             return previous
+        self._assert_writable(command.branch_id)
 
         try:
             current = self._branches[command.branch_id]
@@ -144,7 +168,7 @@ class DomainEngine:
     @staticmethod
     def _accept_draft(
         runtime: BranchRuntime,
-        command: Command,
+        command: EventCause,
         draft: EventDraft,
         sequence_in_commit: int,
     ) -> DomainEvent:
@@ -172,6 +196,32 @@ class DomainEngine:
         except KeyError as error:
             raise EngineContractError(f"unknown parent branch: {parent_branch_id}") from error
         self._branches[child_branch_id] = copy.deepcopy(parent)
+        self._sealed_branches.add(parent_branch_id)
+
+    def reverse_accounting_case(self, request: ReversalRequest) -> ExecutionResult:
+        if request.run_id != self.run_id:
+            raise EngineContractError("reversal run differs from engine run")
+        self._assert_writable(request.branch_id)
+        try:
+            current = self._branches[request.branch_id]
+        except KeyError as error:
+            raise EngineContractError(f"unknown branch: {request.branch_id}") from error
+        working = copy.deepcopy(current)
+        draft, journal = working.accounting.reverse(
+            request.accounting_case_key,
+            working.journals,
+            working.accounting.calendar.date_of(request.committed_at),
+        )
+        if journal.journal_id in working.journals:
+            raise EngineContractError(f"duplicate journal: {journal.journal_id}")
+        working.journals[journal.journal_id] = journal
+        event = self._accept_draft(working, request, draft, 1)
+        self._branches[request.branch_id] = working
+        return ExecutionResult(request.action_id, (event,), (journal,))
+
+    def _assert_writable(self, branch_id: DomainId) -> None:
+        if branch_id in self._sealed_branches:
+            raise EngineContractError(f"branch is sealed: {branch_id}")
 
     def state_of(self, branch_id: DomainId) -> FourLayerState:
         try:

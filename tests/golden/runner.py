@@ -41,7 +41,9 @@ class GoldenScenarioRunner:
             ),
         )
         expected_journals = {
-            str(journal["journal_id"]): journal for journal in self.fixture["journals"]
+            str(journal["journal_id"]): journal
+            for journal in self.fixture["journals"]
+            if journal["journal_role"] == "recognition"
         }
         seen_journal_ids: set[str] = set()
         results: dict[str, ExecutionResult] = {}
@@ -53,6 +55,8 @@ class GoldenScenarioRunner:
             command = parse_command(step["command"])
             if command.branch_id != DomainId(str(step["branch_id"])):
                 raise GoldenMismatch(f"step and command branches differ: {step_id}")
+            if did_fork and command.branch_id == root_id:
+                raise GoldenMismatch(f"ancestor command appears after fork point: {step_id}")
 
             result = engine.handle(command)
             results[step_id] = result

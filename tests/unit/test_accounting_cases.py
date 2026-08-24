@@ -7,7 +7,7 @@ from ledger_sim.domain.cases import (
     AccountingCaseStatus,
 )
 from ledger_sim.domain.events import DomainEvent, FraudDecisionRecorded
-from ledger_sim.domain.values import DomainId, Instant, Money, deterministic_id
+from ledger_sim.domain.values import DomainId, Instant, PositiveMoney, deterministic_id
 
 CASE_KEY = "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
 
@@ -24,7 +24,7 @@ def _input_event() -> DomainEvent:
         actor_id=DomainId("actor-1"),
         causation_id=DomainId("command-1"),
         correlation_id=DomainId("correlation-1"),
-        payload=FraudDecisionRecorded(Money.parse("1.00"), "2026-12"),
+        payload=FraudDecisionRecorded(PositiveMoney.parse("1.00"), "2026-12"),
     )
 
 
@@ -52,7 +52,14 @@ def test_accounting_case_rejects_premature_and_duplicate_lifecycle_actions() -> 
     else:
         raise AssertionError("duplicate post with another journal was accepted")
 
-    assert case.reverse(DomainId("reversal-1"))
+    reversal_id = deterministic_id("journal", case.key, "reversal")
+    try:
+        case.reverse(journal_id, DomainId("caller-supplied-reversal"))
+    except AccountingCaseError as error:
+        assert "not deterministic" in str(error)
+    else:
+        raise AssertionError("caller-supplied reversal ID was accepted")
+    assert case.reverse(journal_id, reversal_id)
     assert case.status is AccountingCaseStatus.REVERSED
     try:
         case.post(journal_id)
@@ -61,7 +68,7 @@ def test_accounting_case_rejects_premature_and_duplicate_lifecycle_actions() -> 
     else:
         raise AssertionError("reversed accounting case was posted again")
     try:
-        case.reverse(DomainId("reversal-2"))
+        case.reverse(journal_id, reversal_id)
     except AccountingCaseError as error:
         assert "AlreadyReversed" in str(error)
     else:

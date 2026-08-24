@@ -6,14 +6,24 @@ from typing import Any
 
 import pytest
 
-from ledger_sim.domain.accounting import AccountingCoordinator
-from ledger_sim.domain.cases import AccountingCaseError, AccountingCaseStatus
+from ledger_sim.domain.accounting import (
+    AccountingContractError,
+    AccountingCoordinator,
+)
 from ledger_sim.domain.commands import parse_command
+from ledger_sim.domain.engine import ReversalRequest
 from ledger_sim.domain.events import JournalPosted
 from ledger_sim.domain.idempotency import CommandIdConflict
 from ledger_sim.domain.sales import SalesContractError
 from ledger_sim.domain.state import EventReducer, StateContractError
-from ledger_sim.domain.values import DomainId, Money, Quantity, UnitPrice, deterministic_id
+from ledger_sim.domain.values import (
+    DomainId,
+    Instant,
+    PositiveMoney,
+    Quantity,
+    SignedMoney,
+    UnitPrice,
+)
 from tests.golden.runner import GoldenMismatch, GoldenScenarioRunner
 
 
@@ -26,7 +36,7 @@ def test_command_driven_scenario_matches_all_frozen_outputs(
     fraud = result.engine.state_of(DomainId("fraud-001"))
     assert baseline.reported == baseline.normative
     assert baseline.reported == fraud.reported
-    assert fraud.reported.profit - fraud.normative.profit == Money.parse("4000.00")
+    assert fraud.reported.profit - fraud.normative.profit == SignedMoney.parse("4000.00")
     assert len(result.steps) == len(golden_fixture["steps"])
     assert sum(len(step.journals) for step in result.steps.values()) == 12
 
@@ -101,8 +111,8 @@ def test_dispatch_uses_half_open_commitment_interval(
 
 
 def test_round_half_up_boundary() -> None:
-    assert Money.parse("1.005") == Money.parse("1.01")
-    assert UnitPrice.parse("0.1005").total(Quantity.parse("10")) == Money.parse("1.01")
+    assert PositiveMoney.parse("1.005") == PositiveMoney.parse("1.01")
+    assert UnitPrice.parse("0.1005").total(Quantity.parse("10")) == PositiveMoney.parse("1.01")
 
 
 def test_mutated_state_snapshot_is_rejected(golden_fixture: dict[str, Any]) -> None:
@@ -186,6 +196,7 @@ def test_case_lifecycle_vectors_use_live_registry(
     branch = DomainId("fraud-001")
     coordinator = run.engine.accounting_of(branch)
     all_events = {event.event_id: event for event in run.engine.events_of(branch)}
+    expected_journals = {journal["journal_id"]: journal for journal in golden_fixture["journals"]}
     successor = None
 
     for vector in golden_fixture["determinism_tests"]["case_lifecycle"]:
@@ -198,12 +209,40 @@ def test_case_lifecycle_vectors_use_live_registry(
             assert journals == ()
             assert case.status.value == vector["expected_status"]
         elif action == "reverse":
-            reversal_id = deterministic_id("journal", case.key, "reversal")
-            assert case.reverse(reversal_id)
-            assert case.status is AccountingCaseStatus.REVERSED
+            request = ReversalRequest(
+                DomainId(vector["action_id"]),
+                DomainId(golden_fixture["run_id"]),
+                DomainId(vector["branch_id"]),
+                DomainId(vector["actor_id"]),
+                DomainId(vector["correlation_id"]),
+                Instant.parse(vector["committed_at"]),
+                vector["case"],
+            )
+            result = run.engine.reverse_accounting_case(request)
+            assert [event.to_fixture() for event in result.events] == [vector["expected_event"]]
+            assert len(result.journals) == 1
+            assert (
+                result.journals[0].to_fixture() == expected_journals[vector["expected_journal_id"]]
+            )
+            assert (
+                run.engine.state_of(branch).reported.to_fixture()
+                == vector["expected_reported_balances"]
+            )
+            coordinator = run.engine.accounting_of(branch)
+            case = coordinator.registry.get(vector["case"])
+            assert case.status.value == vector["expected_status"]
         elif action == "repeat_reverse":
-            with pytest.raises(AccountingCaseError, match="AlreadyReversed"):
-                case.reverse(deterministic_id("journal", case.key, "second-reversal"))
+            request = ReversalRequest(
+                DomainId(vector["action_id"]),
+                DomainId(golden_fixture["run_id"]),
+                DomainId(vector["branch_id"]),
+                DomainId(vector["actor_id"]),
+                DomainId(vector["correlation_id"]),
+                Instant.parse(vector["committed_at"]),
+                vector["case"],
+            )
+            with pytest.raises(AccountingContractError, match="AlreadyReversed"):
+                run.engine.reverse_accounting_case(request)
         elif action == "open_next_cycle":
             successor = coordinator.registry.open_next(case)
             assert successor.key.recognition_cycle == vector["expected_cycle"]
