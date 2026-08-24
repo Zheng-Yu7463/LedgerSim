@@ -277,7 +277,7 @@
         "run_id": {"const": "run-golden-001"},
         "branch_id": {"enum": ["ancestor-001", "baseline-001", "fraud-001"]},
         "actor_id": {"type": "string", "minLength": 1},
-        "command_type": {"enum": ["EstablishCustomerCommitment", "CreateSalesOrder", "DispatchPhysicalGoods", "RecordShipment", "IssueSalesInvoice", "ReceiveCustomerPayment", "RecordCustomerReceipt", "RecordFraudDecision"]},
+        "command_type": {"enum": ["EstablishCustomerCommitment", "CreateSalesOrder", "DispatchPhysicalGoods", "RecordShipment", "IssueSalesInvoice", "ReceiveCustomerPayment", "RecordCustomerReceipt", "RecordFraudDecision", "ReverseAccountingCase"]},
         "requested_at": {"type": "string", "format": "date-time"},
         "aggregate_id": {"type": "string", "minLength": 1},
         "expected_version": {"type": "integer", "minimum": 0},
@@ -352,6 +352,15 @@
       "required": ["target_amount", "target_period"],
       "properties": {"target_amount": {"$ref": "#/$defs/positive_money"}, "target_period": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$"}}
     },
+    "reversal_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accounting_case_key", "original_journal_id"],
+      "properties": {
+        "accounting_case_key": {"type": "string", "minLength": 1},
+        "original_journal_id": {"type": "string", "minLength": 1}
+      }
+    },
     "command": {
       "allOf": [
         {"$ref": "#/$defs/base_command"},
@@ -364,7 +373,8 @@
             {"properties": {"command_type": {"const": "IssueSalesInvoice"}, "payload": {"$ref": "#/$defs/invoice_payload"}}},
             {"properties": {"command_type": {"const": "ReceiveCustomerPayment"}, "payload": {"$ref": "#/$defs/payment_payload"}}},
             {"properties": {"command_type": {"const": "RecordCustomerReceipt"}, "payload": {"$ref": "#/$defs/receipt_payload"}}},
-            {"properties": {"command_type": {"const": "RecordFraudDecision"}, "payload": {"$ref": "#/$defs/fraud_decision_payload"}}}
+            {"properties": {"command_type": {"const": "RecordFraudDecision"}, "payload": {"$ref": "#/$defs/fraud_decision_payload"}}},
+            {"properties": {"command_type": {"const": "ReverseAccountingCase"}, "payload": {"$ref": "#/$defs/reversal_payload"}}}
           ]
         }
       ]
@@ -536,7 +546,7 @@
           "items": {"$ref": "#/$defs/event_order_permutation"}
         },
         "command_retries": {"type": "array", "minItems": 4, "items": {"type": "object", "required": ["command_ref", "mutation", "expected_result", "expected_new_events", "expected_new_journals"]}},
-        "case_lifecycle": {"type": "array", "minItems": 5, "items": {"type": "object", "required": ["action"]}}
+        "case_lifecycle": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/case_lifecycle_action"}}
       }
     },
     "event_order_permutation": {
@@ -551,6 +561,86 @@
         "expected_accounting_content_digest_equal": {"const": true},
         "expected_lineage_digest_equal": {"const": true}
       }
+    },
+    "reversal_command": {
+      "allOf": [
+        {"$ref": "#/$defs/command"},
+        {"properties": {"command_type": {"const": "ReverseAccountingCase"}}, "required": ["command_type"]}
+      ]
+    },
+    "case_lifecycle_action": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "case", "expected_status", "expected_new_journals"],
+          "properties": {
+            "action": {"const": "repeat_input"}, "case": {"type": "string", "minLength": 1},
+            "expected_status": {"const": "posted"}, "expected_new_journals": {"const": 0}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "case", "expected_status", "expected_reversal_count", "command", "expected_event", "expected_journal_id", "expected_reported_balances"],
+          "properties": {
+            "action": {"const": "reverse"}, "case": {"type": "string", "minLength": 1},
+            "expected_status": {"const": "reversed"}, "expected_reversal_count": {"const": 1},
+            "command": {"$ref": "#/$defs/reversal_command"},
+            "expected_event": {"$ref": "#/$defs/event"},
+            "expected_journal_id": {"type": "string", "minLength": 1},
+            "expected_reported_balances": {"$ref": "#/$defs/balance_state"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "case", "command_ref", "expected_result", "expected_new_events", "expected_new_journals"],
+          "properties": {
+            "action": {"const": "retry_reverse"}, "case": {"type": "string", "minLength": 1},
+            "command_ref": {"type": "string", "minLength": 1},
+            "expected_result": {"const": "return_original_result"},
+            "expected_new_events": {"const": 0}, "expected_new_journals": {"const": 0}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "case", "command_ref", "mutation", "expected_result", "expected_new_events", "expected_new_journals"],
+          "properties": {
+            "action": {"const": "conflicting_reverse_retry"}, "case": {"type": "string", "minLength": 1},
+            "command_ref": {"type": "string", "minLength": 1},
+            "mutation": {
+              "type": "object", "additionalProperties": false, "required": ["payload.original_journal_id"],
+              "properties": {"payload.original_journal_id": {"type": "string", "minLength": 1}}
+            },
+            "expected_result": {"const": "CommandIdConflict"},
+            "expected_new_events": {"const": 0}, "expected_new_journals": {"const": 0}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "case", "command", "expected_result", "expected_new_events", "expected_new_journals"],
+          "properties": {
+            "action": {"const": "second_reverse"}, "case": {"type": "string", "minLength": 1},
+            "command": {"$ref": "#/$defs/reversal_command"},
+            "expected_result": {"const": "AccountingCaseAlreadyReversed"},
+            "expected_new_events": {"const": 0}, "expected_new_journals": {"const": 0}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "predecessor_cycle", "expected_cycle", "expected_status"],
+          "properties": {
+            "action": {"const": "open_next_cycle"}, "predecessor_cycle": {"const": 1},
+            "expected_cycle": {"const": 2}, "expected_status": {"const": "pending"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "predecessor_cycle", "expected_result"],
+          "properties": {
+            "action": {"const": "repeat_open_next_cycle"}, "predecessor_cycle": {"const": 1},
+            "expected_result": {"const": "return_existing_cycle_2"}
+          }
+        }
+      ]
     },
     "counterfactual_test": {
       "type": "object",

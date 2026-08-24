@@ -12,6 +12,7 @@ from ledger_sim.domain.cases import (
     AccountingCaseRegistry,
     AccountingCaseStatus,
 )
+from ledger_sim.domain.commands import ReverseAccountingCase
 from ledger_sim.domain.events import (
     AccountingCaseOpened,
     ControlTransferred,
@@ -229,11 +230,20 @@ class AccountingCoordinator:
 
     def reverse(
         self,
-        accounting_case_key: str,
+        command: ReverseAccountingCase,
         journals: dict[DomainId, Journal],
         accounting_date: BusinessDate,
     ) -> tuple[EventDraft, Journal]:
+        accounting_case_key = command.payload.accounting_case_key
         case = self.registry.get(accounting_case_key)
+        if case.key.run_id != command.run_id:
+            raise AccountingContractError("accounting case run differs from command run")
+        if case.key.branch_id != command.branch_id:
+            raise AccountingContractError("accounting case branch differs from command branch")
+        if case.key.case_id != command.aggregate_id:
+            raise AccountingContractError("command aggregate differs from accounting case")
+        if case.key.business_chain_id != command.business_chain_id:
+            raise AccountingContractError("accounting case business chain differs from command")
         if case.status is AccountingCaseStatus.PENDING:
             raise AccountingContractError("cannot reverse a pending accounting case")
         if case.status is AccountingCaseStatus.REVERSED:
@@ -241,6 +251,8 @@ class AccountingCoordinator:
         original_id = case.posted_journal_id
         if original_id is None:
             raise AccountingContractError("posted accounting case lacks its journal")
+        if original_id != command.payload.original_journal_id:
+            raise AccountingContractError("reversal command references the wrong original journal")
         try:
             original = journals[original_id]
         except KeyError as error:

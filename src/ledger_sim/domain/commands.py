@@ -166,6 +166,18 @@ class RecordFraudDecision(CommandEnvelope):
     payload: FraudDecisionTerms
 
 
+@dataclass(frozen=True, slots=True)
+class ReversalTerms:
+    accounting_case_key: str
+    original_journal_id: DomainId
+
+
+@dataclass(frozen=True, slots=True)
+class ReverseAccountingCase(CommandEnvelope):
+    command_type: ClassVar[str] = "ReverseAccountingCase"
+    payload: ReversalTerms
+
+
 type Command = (
     EstablishCustomerCommitment
     | CreateSalesOrder
@@ -175,6 +187,7 @@ type Command = (
     | ReceiveCustomerPayment
     | RecordCustomerReceipt
     | RecordFraudDecision
+    | ReverseAccountingCase
 )
 
 _ENVELOPE_FIELDS = {
@@ -251,6 +264,7 @@ _PAYLOAD_FIELDS = {
         "currency",
     },
     "RecordFraudDecision": {"target_amount", "target_period"},
+    "ReverseAccountingCase": {"accounting_case_key", "original_journal_id"},
 }
 
 
@@ -450,6 +464,14 @@ class CommandCodec:
                 payload=FraudDecisionTerms(
                     _canonical_value(payload, "target_amount", command_type, PositiveMoney.parse),
                     _target_period(payload, "target_period", command_type),
+                ),
+            )
+        if command_type == ReverseAccountingCase.command_type:
+            return ReverseAccountingCase(
+                **base,
+                payload=ReversalTerms(
+                    _string(payload, "accounting_case_key", command_type),
+                    DomainId(_string(payload, "original_journal_id", command_type)),
                 ),
             )
         raise AssertionError("command type registry and decoder are inconsistent")

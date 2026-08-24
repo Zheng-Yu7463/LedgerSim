@@ -2697,11 +2697,23 @@
         "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
         "expected_status": "reversed",
         "expected_reversal_count": 1,
-        "action_id": "reverse-fraud-reported-revenue-001",
-        "branch_id": "fraud-001",
-        "actor_id": "accounting-system-001",
-        "correlation_id": "corr-fraud-reversal-001",
-        "committed_at": "2027-01-05T02:00:00.000000Z",
+        "command": {
+          "command_id": "reverse-fraud-reported-revenue-001",
+          "schema_version": "1.0.0",
+          "run_id": "run-golden-001",
+          "branch_id": "fraud-001",
+          "actor_id": "accounting-system-001",
+          "command_type": "ReverseAccountingCase",
+          "requested_at": "2027-01-05T02:00:00.000000Z",
+          "aggregate_id": "589590cc-ca1a-5701-b241-6040e75edeec",
+          "expected_version": 0,
+          "business_chain_id": "sales-chain-year-end-001",
+          "correlation_id": "corr-fraud-reversal-001",
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+            "original_journal_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24"
+          }
+        },
         "expected_event": {
           "event_id": "28f149aa-ce20-5b6b-972c-f34416a572cc",
           "event_type": "ReportedJournalPosted",
@@ -2724,14 +2736,47 @@
         }
       },
       {
-        "action": "repeat_reverse",
+        "action": "retry_reverse",
         "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "command_ref": "reverse-fraud-reported-revenue-001",
+        "expected_result": "return_original_result",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      },
+      {
+        "action": "conflicting_reverse_retry",
+        "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "command_ref": "reverse-fraud-reported-revenue-001",
+        "mutation": {
+          "payload.original_journal_id": "wrong-original-journal-for-fingerprint"
+        },
+        "expected_result": "CommandIdConflict",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      },
+      {
+        "action": "second_reverse",
+        "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "command": {
+          "command_id": "reverse-fraud-reported-revenue-002",
+          "schema_version": "1.0.0",
+          "run_id": "run-golden-001",
+          "branch_id": "fraud-001",
+          "actor_id": "accounting-system-001",
+          "command_type": "ReverseAccountingCase",
+          "requested_at": "2027-01-05T02:00:01.000000Z",
+          "aggregate_id": "589590cc-ca1a-5701-b241-6040e75edeec",
+          "expected_version": 1,
+          "business_chain_id": "sales-chain-year-end-001",
+          "correlation_id": "corr-fraud-reversal-002",
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+            "original_journal_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24"
+          }
+        },
         "expected_result": "AccountingCaseAlreadyReversed",
-        "action_id": "reverse-fraud-reported-revenue-001",
-        "branch_id": "fraud-001",
-        "actor_id": "accounting-system-001",
-        "correlation_id": "corr-fraud-reversal-001",
-        "committed_at": "2027-01-05T02:00:00.000000Z"
+        "expected_new_events": 0,
+        "expected_new_journals": 0
       },
       {
         "action": "open_next_cycle",

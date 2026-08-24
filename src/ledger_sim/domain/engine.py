@@ -6,12 +6,12 @@ import copy
 from dataclasses import dataclass, field
 
 from ledger_sim.domain.accounting import AccountingCoordinator, Journal
-from ledger_sim.domain.commands import Command
+from ledger_sim.domain.commands import Command, ReverseAccountingCase
 from ledger_sim.domain.events import DomainEvent, EventDraft, envelope_event
 from ledger_sim.domain.idempotency import IdempotencyRegistry
 from ledger_sim.domain.sales import SalesAggregate, SalesPolicy
 from ledger_sim.domain.state import EventReducer, FourLayerState
-from ledger_sim.domain.values import DomainId, Instant
+from ledger_sim.domain.values import DomainId
 
 
 class EngineContractError(ValueError):
@@ -23,28 +23,6 @@ class ExecutionResult:
     command_id: DomainId
     events: tuple[DomainEvent, ...]
     journals: tuple[Journal, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ReversalRequest:
-    action_id: DomainId
-    run_id: DomainId
-    branch_id: DomainId
-    actor_id: DomainId
-    correlation_id: DomainId
-    committed_at: Instant
-    accounting_case_key: str
-
-    @property
-    def command_id(self) -> DomainId:
-        return self.action_id
-
-    @property
-    def requested_at(self) -> Instant:
-        return self.committed_at
-
-
-type EventCause = Command | ReversalRequest
 
 
 @dataclass(slots=True)
@@ -118,38 +96,55 @@ class DomainEngine:
             raise EngineContractError(f"unknown branch: {command.branch_id}") from error
 
         working = copy.deepcopy(current)
-        drafts = self.sales.decide(command, working.state)
         accepted_events: list[DomainEvent] = []
         accepted_journals: list[Journal] = []
 
-        for draft in drafts:
-            event = self._accept_draft(
-                working,
+        if isinstance(command, ReverseAccountingCase):
+            actual_version = working.state.version_of(command.aggregate_id)
+            if command.expected_version != actual_version:
+                raise EngineContractError(
+                    f"expected version {command.expected_version}, actual {actual_version}"
+                )
+            draft, journal = working.accounting.reverse(
                 command,
-                draft,
-                len(accepted_events) + 1,
+                working.journals,
+                working.accounting.calendar.date_of(command.requested_at),
             )
-            accepted_events.append(event)
-            accounting_drafts, journals = working.accounting.observe(
-                event,
-                working.events,
-            )
-            for journal in journals:
-                if journal.journal_id in working.journals:
-                    raise EngineContractError(f"duplicate journal: {journal.journal_id}")
-                working.journals[journal.journal_id] = journal
-                accepted_journals.append(journal)
-            for accounting_draft in accounting_drafts:
-                accounting_event = self._accept_draft(
+            self._add_journal(working, journal)
+            accepted_journals.append(journal)
+            accepted_events.append(self._accept_draft(working, command, draft, 1))
+        else:
+            drafts = self.sales.decide(command, working.state)
+            for draft in drafts:
+                event = self._accept_draft(
                     working,
                     command,
-                    accounting_draft,
+                    draft,
                     len(accepted_events) + 1,
                 )
-                accepted_events.append(accounting_event)
+                accepted_events.append(event)
+                accounting_drafts, journals = working.accounting.observe(
+                    event,
+                    working.events,
+                )
+                for journal in journals:
+                    self._add_journal(working, journal)
+                    accepted_journals.append(journal)
+                for accounting_draft in accounting_drafts:
+                    accounting_event = self._accept_draft(
+                        working,
+                        command,
+                        accounting_draft,
+                        len(accepted_events) + 1,
+                    )
+                    accepted_events.append(accounting_event)
 
         actual_order = tuple(event.event_type for event in accepted_events)
-        expected_order = _ALLOWED_EVENT_ORDERS[command.command_type]
+        expected_order: tuple[str, ...]
+        if isinstance(command, ReverseAccountingCase):
+            expected_order = (f"{accepted_journals[0].ledger_type.title()}JournalPosted",)
+        else:
+            expected_order = _ALLOWED_EVENT_ORDERS[command.command_type]
         if actual_order != expected_order:
             raise EngineContractError(
                 f"{command.command_type} emitted {actual_order}, expected {expected_order}"
@@ -168,7 +163,7 @@ class DomainEngine:
     @staticmethod
     def _accept_draft(
         runtime: BranchRuntime,
-        command: EventCause,
+        command: Command,
         draft: EventDraft,
         sequence_in_commit: int,
     ) -> DomainEvent:
@@ -198,26 +193,11 @@ class DomainEngine:
         self._branches[child_branch_id] = copy.deepcopy(parent)
         self._sealed_branches.add(parent_branch_id)
 
-    def reverse_accounting_case(self, request: ReversalRequest) -> ExecutionResult:
-        if request.run_id != self.run_id:
-            raise EngineContractError("reversal run differs from engine run")
-        self._assert_writable(request.branch_id)
-        try:
-            current = self._branches[request.branch_id]
-        except KeyError as error:
-            raise EngineContractError(f"unknown branch: {request.branch_id}") from error
-        working = copy.deepcopy(current)
-        draft, journal = working.accounting.reverse(
-            request.accounting_case_key,
-            working.journals,
-            working.accounting.calendar.date_of(request.committed_at),
-        )
-        if journal.journal_id in working.journals:
+    @staticmethod
+    def _add_journal(runtime: BranchRuntime, journal: Journal) -> None:
+        if journal.journal_id in runtime.journals:
             raise EngineContractError(f"duplicate journal: {journal.journal_id}")
-        working.journals[journal.journal_id] = journal
-        event = self._accept_draft(working, request, draft, 1)
-        self._branches[request.branch_id] = working
-        return ExecutionResult(request.action_id, (event,), (journal,))
+        runtime.journals[journal.journal_id] = journal
 
     def _assert_writable(self, branch_id: DomainId) -> None:
         if branch_id in self._sealed_branches:

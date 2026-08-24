@@ -53,6 +53,14 @@ def validate_negative_schema_cases(fixture: dict, validator: Draft202012Validato
     def empty_command_payload(candidate: dict) -> None:
         candidate["steps"][0]["command"]["payload"] = {}
 
+    def reversal_without_original_journal(candidate: dict) -> None:
+        reversal = next(
+            item
+            for item in candidate["determinism_tests"]["case_lifecycle"]
+            if item["action"] == "reverse"
+        )
+        del reversal["command"]["payload"]["original_journal_id"]
+
     def empty_labels(candidate: dict) -> None:
         candidate["labels"] = []
 
@@ -90,6 +98,7 @@ def validate_negative_schema_cases(fixture: dict, validator: Draft202012Validato
     mutations = {
         "empty policy": empty_policy,
         "empty command payload": empty_command_payload,
+        "reversal without original journal": reversal_without_original_journal,
         "empty labels": empty_labels,
         "empty visibility": empty_visibility,
         "positive amount marked understated": positive_understatement,
@@ -115,7 +124,10 @@ def validate_references_and_uniqueness(fixture: dict) -> None:
     if referenced_state_ids != state_ids:
         raise AssertionError("step state references and declared state snapshots differ")
 
+    lifecycle = fixture["determinism_tests"]["case_lifecycle"]
+    lifecycle_commands = [item["command"] for item in lifecycle if "command" in item]
     command_ids = [step["command"]["command_id"] for step in fixture["steps"]]
+    command_ids.extend(command["command_id"] for command in lifecycle_commands)
     event_ids = [
         event["event_id"] for step in fixture["steps"] for event in step["expected_events"]
     ]
@@ -160,6 +172,36 @@ def validate_references_and_uniqueness(fixture: dict) -> None:
             raise AssertionError("reversal and original journal contracts differ")
         reversed_originals.append(original_id)
     require_unique(reversed_originals, "reversed original journal")
+
+    lifecycle_commands_by_id = {
+        command["command_id"]: command for command in lifecycle_commands
+    }
+    reverse_vector = next(item for item in lifecycle if item["action"] == "reverse")
+    reverse_command = reverse_vector["command"]
+    case_parts = reverse_vector["case"].split("|")
+    if len(case_parts) != 6:
+        raise AssertionError("lifecycle reversal uses an invalid accounting case key")
+    if (
+        reverse_command["run_id"] != case_parts[0]
+        or reverse_command["branch_id"] != case_parts[1]
+        or reverse_command["business_chain_id"] != case_parts[4]
+        or reverse_command["payload"]["accounting_case_key"] != reverse_vector["case"]
+    ):
+        raise AssertionError("lifecycle reversal command differs from its accounting case")
+    reversal = journals_by_id[reverse_vector["expected_journal_id"]]
+    if (
+        reversal["accounting_case_key"] != reverse_vector["case"]
+        or reversal["reverses_journal_id"]
+        != reverse_command["payload"]["original_journal_id"]
+    ):
+        raise AssertionError("lifecycle reversal command differs from frozen journals")
+
+    for vector in lifecycle:
+        command_ref = vector.get("command_ref")
+        if command_ref is not None and command_ref not in lifecycle_commands_by_id:
+            raise AssertionError(f"lifecycle action references missing command: {command_ref}")
+        if "case" in vector and vector["case"] != reverse_vector["case"]:
+            raise AssertionError("lifecycle actions must target the same accounting case")
 
     artifact_ids = event_id_set | set(journal_ids) | set(journal_line_ids)
     artifact_ids |= {item["object_id"] for item in fixture["misstatements"]}
@@ -505,7 +547,7 @@ def main() -> None:
     validate_random_vectors(fixture)
     validate_release_gates(fixture)
     print(
-        "PASS: schema, 9 negative cases, references, accounting digests, "
+        "PASS: schema, 10 negative cases, references, accounting digests, "
         "visibility, random vectors, and release gates"
     )
 

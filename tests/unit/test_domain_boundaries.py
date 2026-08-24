@@ -200,3 +200,71 @@ def test_engine_and_runner_reject_ancestor_writes_after_fork(
     )
     with pytest.raises(GoldenMismatch, match="ancestor command appears after fork"):
         GoldenScenarioRunner(candidate).run()
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "error_type", "message"),
+    [
+        (("aggregate_id",), "wrong-case-aggregate", AccountingContractError, "aggregate"),
+        (("business_chain_id",), "wrong-chain", AccountingContractError, "business chain"),
+        (
+            ("payload", "original_journal_id"),
+            "wrong-original-journal",
+            AccountingContractError,
+            "wrong original journal",
+        ),
+        (("expected_version",), 1, EngineContractError, "expected version"),
+    ],
+)
+def test_reversal_command_validates_case_identity_and_version(
+    golden_fixture: dict[str, Any],
+    path: tuple[str, ...],
+    value: object,
+    error_type: type[Exception],
+    message: str,
+) -> None:
+    run = GoldenScenarioRunner(golden_fixture).run()
+    raw = copy.deepcopy(
+        next(
+            item
+            for item in golden_fixture["determinism_tests"]["case_lifecycle"]
+            if item["action"] == "reverse"
+        )["command"]
+    )
+    target = raw
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+
+    with pytest.raises(error_type, match=message):
+        run.engine.handle(parse_command(raw))
+
+
+def test_reversal_command_rejects_inherited_ancestor_case(
+    golden_fixture: dict[str, Any],
+) -> None:
+    run = GoldenScenarioRunner(golden_fixture).run()
+    branch = DomainId("fraud-001")
+    case = next(
+        item
+        for item in run.engine.accounting_of(branch).registry.cases
+        if str(item.key.branch_id) == "ancestor-001" and item.status.value == "posted"
+    )
+    assert case.posted_journal_id is not None
+    raw = copy.deepcopy(
+        next(
+            item
+            for item in golden_fixture["determinism_tests"]["case_lifecycle"]
+            if item["action"] == "reverse"
+        )["command"]
+    )
+    raw["command_id"] = "reject-inherited-ancestor-reversal"
+    raw["branch_id"] = str(branch)
+    raw["aggregate_id"] = str(case.key.case_id)
+    raw["expected_version"] = 0
+    raw["business_chain_id"] = str(case.key.business_chain_id)
+    raw["payload"]["accounting_case_key"] = str(case.key)
+    raw["payload"]["original_journal_id"] = str(case.posted_journal_id)
+
+    with pytest.raises(AccountingContractError, match="branch differs"):
+        run.engine.handle(parse_command(raw))

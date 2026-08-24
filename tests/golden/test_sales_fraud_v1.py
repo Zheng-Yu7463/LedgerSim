@@ -11,14 +11,12 @@ from ledger_sim.domain.accounting import (
     AccountingCoordinator,
 )
 from ledger_sim.domain.commands import parse_command
-from ledger_sim.domain.engine import ReversalRequest
 from ledger_sim.domain.events import JournalPosted
 from ledger_sim.domain.idempotency import CommandIdConflict
 from ledger_sim.domain.sales import SalesContractError
 from ledger_sim.domain.state import EventReducer, StateContractError
 from ledger_sim.domain.values import (
     DomainId,
-    Instant,
     PositiveMoney,
     Quantity,
     SignedMoney,
@@ -197,6 +195,8 @@ def test_case_lifecycle_vectors_use_live_registry(
     coordinator = run.engine.accounting_of(branch)
     all_events = {event.event_id: event for event in run.engine.events_of(branch)}
     expected_journals = {journal["journal_id"]: journal for journal in golden_fixture["journals"]}
+    commands: dict[str, dict[str, Any]] = {}
+    reversal_result = None
     successor = None
 
     for vector in golden_fixture["determinism_tests"]["case_lifecycle"]:
@@ -209,20 +209,17 @@ def test_case_lifecycle_vectors_use_live_registry(
             assert journals == ()
             assert case.status.value == vector["expected_status"]
         elif action == "reverse":
-            request = ReversalRequest(
-                DomainId(vector["action_id"]),
-                DomainId(golden_fixture["run_id"]),
-                DomainId(vector["branch_id"]),
-                DomainId(vector["actor_id"]),
-                DomainId(vector["correlation_id"]),
-                Instant.parse(vector["committed_at"]),
-                vector["case"],
-            )
-            result = run.engine.reverse_accounting_case(request)
-            assert [event.to_fixture() for event in result.events] == [vector["expected_event"]]
-            assert len(result.journals) == 1
+            raw = copy.deepcopy(vector["command"])
+            command = parse_command(raw)
+            commands[raw["command_id"]] = raw
+            reversal_result = run.engine.handle(command)
+            assert [event.to_fixture() for event in reversal_result.events] == [
+                vector["expected_event"]
+            ]
+            assert len(reversal_result.journals) == 1
             assert (
-                result.journals[0].to_fixture() == expected_journals[vector["expected_journal_id"]]
+                reversal_result.journals[0].to_fixture()
+                == expected_journals[vector["expected_journal_id"]]
             )
             assert (
                 run.engine.state_of(branch).reported.to_fixture()
@@ -231,18 +228,35 @@ def test_case_lifecycle_vectors_use_live_registry(
             coordinator = run.engine.accounting_of(branch)
             case = coordinator.registry.get(vector["case"])
             assert case.status.value == vector["expected_status"]
-        elif action == "repeat_reverse":
-            request = ReversalRequest(
-                DomainId(vector["action_id"]),
-                DomainId(golden_fixture["run_id"]),
-                DomainId(vector["branch_id"]),
-                DomainId(vector["actor_id"]),
-                DomainId(vector["correlation_id"]),
-                Instant.parse(vector["committed_at"]),
-                vector["case"],
-            )
+        elif action == "retry_reverse":
+            assert reversal_result is not None
+            event_count = len(run.engine.events_of(branch))
+            journal_count = len(run.engine.journals_of(branch))
+            replayed = run.engine.handle(parse_command(commands[vector["command_ref"]]))
+            assert replayed is reversal_result
+            assert len(run.engine.events_of(branch)) == event_count
+            assert len(run.engine.journals_of(branch)) == journal_count
+        elif action == "conflicting_reverse_retry":
+            raw = copy.deepcopy(commands[vector["command_ref"]])
+            for dotted_path, value in vector["mutation"].items():
+                target = raw
+                parts = dotted_path.split(".")
+                for part in parts[:-1]:
+                    target = target[part]
+                target[parts[-1]] = value
+            event_count = len(run.engine.events_of(branch))
+            journal_count = len(run.engine.journals_of(branch))
+            with pytest.raises(CommandIdConflict):
+                run.engine.handle(parse_command(raw))
+            assert len(run.engine.events_of(branch)) == event_count
+            assert len(run.engine.journals_of(branch)) == journal_count
+        elif action == "second_reverse":
+            event_count = len(run.engine.events_of(branch))
+            journal_count = len(run.engine.journals_of(branch))
             with pytest.raises(AccountingContractError, match="AlreadyReversed"):
-                run.engine.reverse_accounting_case(request)
+                run.engine.handle(parse_command(vector["command"]))
+            assert len(run.engine.events_of(branch)) == event_count
+            assert len(run.engine.journals_of(branch)) == journal_count
         elif action == "open_next_cycle":
             successor = coordinator.registry.open_next(case)
             assert successor.key.recognition_cycle == vector["expected_cycle"]
