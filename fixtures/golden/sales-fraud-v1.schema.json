@@ -1,0 +1,595 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sales-fraud-v1.schema.json",
+  "title": "Sales Fraud Golden Fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "fixture_id",
+    "run_id",
+    "description",
+    "currency",
+    "timezone",
+    "observation_cutoff",
+    "event_envelope_derivation",
+    "event_type_registry",
+    "branches",
+    "policy",
+    "master_data",
+    "chart_of_accounts",
+    "opening_balances",
+    "decision_specs",
+    "steps",
+    "state_snapshots",
+    "journals",
+    "pending_cases",
+    "misstatements",
+    "labels",
+    "visibility_expectations",
+    "determinism_tests",
+    "counterfactual_tests",
+    "release_tests"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "1.0.0"},
+    "fixture_id": {"const": "sales-fraud-v1"},
+    "run_id": {"const": "run-golden-001"},
+    "description": {"type": "string", "minLength": 1},
+    "currency": {"const": "CNY"},
+    "timezone": {"const": "Asia/Shanghai"},
+    "observation_cutoff": {"type": "string", "format": "date-time"},
+    "event_envelope_derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "branch_id", "actor_id", "causation_id", "correlation_id", "event_occurred_at", "committed_at", "order_within_commit"],
+      "properties": {
+        "run_id": {"const": "copy(command.run_id)"},
+        "branch_id": {"const": "copy(command.branch_id)"},
+        "actor_id": {"const": "copy(command.actor_id)"},
+        "causation_id": {"const": "copy(command.command_id)"},
+        "correlation_id": {"const": "copy(command.correlation_id)"},
+        "event_occurred_at": {"const": "copy(command.requested_at)"},
+        "committed_at": {"const": "copy(command.requested_at)"},
+        "order_within_commit": {"const": "sequence_in_commit ascending"}
+      }
+    },
+    "event_type_registry": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "branches": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/branch"}
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sales_rule_version", "delivery_term", "fixed_consideration", "customer_acceptance_required", "right_of_return", "variable_consideration", "partial_delivery", "reported_revenue_inputs", "reported_cogs_inputs", "normative_revenue_inputs", "normative_cogs_inputs", "rounding"],
+      "properties": {
+        "sales_rule_version": {"const": "sales-v1"},
+        "delivery_term": {"const": "dispatch_point"},
+        "fixed_consideration": {"const": true},
+        "customer_acceptance_required": {"const": false},
+        "right_of_return": {"const": false},
+        "variable_consideration": {"const": false},
+        "partial_delivery": {"const": false},
+        "reported_revenue_inputs": {"const": ["ShipmentRecordAccepted", "SalesInvoiceIssued"]},
+        "reported_cogs_inputs": {"const": ["ShipmentRecordAccepted", "SalesInvoiceIssued"]},
+        "normative_revenue_inputs": {"const": ["ControlTransferred", "SettlementRightEstablished"]},
+        "normative_cogs_inputs": {"const": ["ControlTransferred", "SettlementRightEstablished"]},
+        "rounding": {"const": "ROUND_HALF_UP"}
+      }
+    },
+    "master_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["company_id", "customer_id", "product_id", "currency", "unit_price", "unit_cost"],
+      "properties": {
+        "company_id": {"type": "string"},
+        "customer_id": {"type": "string"},
+        "product_id": {"type": "string"},
+        "currency": {"const": "CNY"},
+        "unit_price": {"$ref": "#/$defs/unit_price"},
+        "unit_cost": {"$ref": "#/$defs/unit_cost"}
+      }
+    },
+    "chart_of_accounts": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["account", "normal_balance"],
+        "properties": {
+          "account": {"type": "string"},
+          "normal_balance": {"enum": ["debit", "credit"]}
+        }
+      }
+    },
+    "opening_balances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reported", "normative", "physical_inventory_quantity", "recorded_inventory_quantity"],
+      "properties": {
+        "reported": {"$ref": "#/$defs/balance_state"},
+        "normative": {"$ref": "#/$defs/balance_state"},
+        "physical_inventory_quantity": {"$ref": "#/$defs/quantity"},
+        "recorded_inventory_quantity": {"$ref": "#/$defs/quantity"}
+      }
+    },
+    "decision_specs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "allOf": [
+        {"contains": {"properties": {"decision_spec_id": {"const": "payment_delay_v1"}}, "required": ["decision_spec_id"]}, "minContains": 1, "maxContains": 1},
+        {"contains": {"properties": {"decision_spec_id": {"const": "post_fraud_collection_v1"}}, "required": ["decision_spec_id"]}, "minContains": 1, "maxContains": 1}
+      ],
+      "items": {"$ref": "#/$defs/decision_spec"}
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/step"}
+    },
+    "state_snapshots": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/state_snapshot"}
+    },
+    "journals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/journal"}
+    },
+    "pending_cases": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/pending_case"}
+    },
+    "misstatements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/misstatement"}
+    },
+    "labels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/label"}
+    },
+    "visibility_expectations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/visibility"}
+    },
+    "determinism_tests": {"$ref": "#/$defs/determinism_tests"},
+    "counterfactual_tests": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "allOf": [
+        {"contains": {"properties": {"name": {"const": "shared_state_shared_random"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1},
+        {"contains": {"properties": {"name": {"const": "causal_branch_random"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1},
+        {"contains": {"properties": {"name": {"const": "raw_branch_id_forbidden"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}
+      ],
+      "items": {"$ref": "#/$defs/counterfactual_test"}
+    },
+    "release_tests": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "allOf": [
+        {"contains": {"properties": {"name": {"const": "single_branch_publish_succeeds"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1},
+        {"contains": {"properties": {"name": {"const": "second_twin_publish_rejected"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1},
+        {"contains": {"properties": {"name": {"const": "duplicate_history_fingerprint_rejected"}}, "required": ["name"]}, "minContains": 1, "maxContains": 1}
+      ],
+      "items": {"$ref": "#/$defs/release_test"}
+    }
+  },
+  "$defs": {
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch_id", "parent_branch_id"],
+      "properties": {
+        "branch_id": {"enum": ["ancestor-001", "baseline-001", "fraud-001"]},
+        "parent_branch_id": {"type": ["string", "null"]}
+      }
+    },
+    "money": {"type": "string", "pattern": "^-?[0-9]+\\.[0-9]{2}$"},
+    "nonnegative_money": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$"},
+    "positive_money": {"type": "string", "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]*\\.[0-9]{2})$"},
+    "quantity": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{4}$"},
+    "unit_price": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{4}$"},
+    "unit_cost": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{6}$"},
+    "string_array": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "balance_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bank", "accounts_receivable", "inventory", "paid_in_capital", "sales_revenue", "cost_of_goods_sold", "profit"],
+      "properties": {
+        "bank": {"$ref": "#/$defs/money"},
+        "accounts_receivable": {"$ref": "#/$defs/money"},
+        "inventory": {"$ref": "#/$defs/money"},
+        "paid_in_capital": {"$ref": "#/$defs/money"},
+        "sales_revenue": {"$ref": "#/$defs/money"},
+        "cost_of_goods_sold": {"$ref": "#/$defs/money"},
+        "profit": {"$ref": "#/$defs/money"}
+      }
+    },
+    "economic_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physical_inventory_quantity", "commitments", "settlement_rights", "bank"],
+      "properties": {
+        "physical_inventory_quantity": {"$ref": "#/$defs/quantity"},
+        "commitments": {"$ref": "#/$defs/string_array"},
+        "settlement_rights": {"$ref": "#/$defs/string_array"},
+        "bank": {"$ref": "#/$defs/money"}
+      }
+    },
+    "enterprise_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orders", "shipments", "invoices", "receipts", "recorded_inventory_quantity"],
+      "properties": {
+        "orders": {"$ref": "#/$defs/string_array"},
+        "shipments": {"$ref": "#/$defs/string_array"},
+        "invoices": {"$ref": "#/$defs/string_array"},
+        "receipts": {"$ref": "#/$defs/string_array"},
+        "recorded_inventory_quantity": {"$ref": "#/$defs/quantity"}
+      }
+    },
+    "state_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["economic", "enterprise", "reported", "normative"],
+      "properties": {
+        "economic": {"$ref": "#/$defs/economic_state"},
+        "enterprise": {"$ref": "#/$defs/enterprise_state"},
+        "reported": {"$ref": "#/$defs/balance_state"},
+        "normative": {"$ref": "#/$defs/balance_state"},
+        "truth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fraud_decisions"],
+          "properties": {"fraud_decisions": {"$ref": "#/$defs/string_array"}}
+        }
+      }
+    },
+    "base_command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_id", "schema_version", "run_id", "branch_id", "actor_id", "command_type", "requested_at", "aggregate_id", "expected_version", "business_chain_id", "correlation_id", "payload"],
+      "properties": {
+        "command_id": {"type": "string", "minLength": 1},
+        "schema_version": {"const": "1.0.0"},
+        "run_id": {"const": "run-golden-001"},
+        "branch_id": {"enum": ["ancestor-001", "baseline-001", "fraud-001"]},
+        "actor_id": {"type": "string", "minLength": 1},
+        "command_type": {"enum": ["EstablishCustomerCommitment", "CreateSalesOrder", "DispatchPhysicalGoods", "RecordShipment", "IssueSalesInvoice", "ReceiveCustomerPayment", "RecordCustomerReceipt", "RecordFraudDecision"]},
+        "requested_at": {"type": "string", "format": "date-time"},
+        "aggregate_id": {"type": "string", "minLength": 1},
+        "expected_version": {"type": "integer", "minimum": 0},
+        "business_chain_id": {"type": ["string", "null"]},
+        "correlation_id": {"type": "string", "minLength": 1},
+        "payload": {"type": "object", "minProperties": 1}
+      }
+    },
+    "commitment_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["company_id", "customer_id", "product_id", "quantity", "fixed_consideration", "currency", "delivery_term", "expires_at"],
+      "properties": {
+        "company_id": {"type": "string"}, "customer_id": {"type": "string"}, "product_id": {"type": "string"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "fixed_consideration": {"$ref": "#/$defs/nonnegative_money"},
+        "currency": {"const": "CNY"}, "delivery_term": {"const": "dispatch_point"}, "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "order_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claimed_commitment_id", "company_id", "customer_id", "product_id", "quantity", "unit_price", "currency"],
+      "properties": {
+        "claimed_commitment_id": {"type": "string"}, "company_id": {"type": "string"}, "customer_id": {"type": "string"}, "product_id": {"type": "string"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "unit_price": {"$ref": "#/$defs/unit_price"}, "currency": {"const": "CNY"}
+      }
+    },
+    "dispatch_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commitment_id", "company_id", "customer_id", "product_id", "quantity", "currency", "dispatched_at"],
+      "properties": {
+        "commitment_id": {"type": "string"}, "company_id": {"type": "string"}, "customer_id": {"type": "string"}, "product_id": {"type": "string"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "currency": {"const": "CNY"}, "dispatched_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "shipment_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["company_id", "customer_id", "product_id", "quantity", "claimed_effective_at"],
+      "properties": {
+        "company_id": {"type": "string"}, "customer_id": {"type": "string"}, "product_id": {"type": "string"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "claimed_effective_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "invoice_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["company_id", "customer_id", "product_id", "quantity", "unit_price", "net_amount", "tax_amount", "currency", "invoice_date"],
+      "properties": {
+        "company_id": {"type": "string"}, "customer_id": {"type": "string"}, "product_id": {"type": "string"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "unit_price": {"$ref": "#/$defs/unit_price"},
+        "net_amount": {"$ref": "#/$defs/nonnegative_money"}, "tax_amount": {"const": "0.00"}, "currency": {"const": "CNY"},
+        "invoice_date": {"type": "string", "format": "date"}
+      }
+    },
+    "payment_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["settlement_right_id", "bank_account_id", "amount", "currency"],
+      "properties": {"settlement_right_id": {"type": "string"}, "bank_account_id": {"type": "string"}, "amount": {"$ref": "#/$defs/nonnegative_money"}, "currency": {"const": "CNY"}}
+    },
+    "receipt_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invoice_id", "bank_account_id", "amount", "currency"],
+      "properties": {"invoice_id": {"type": "string"}, "bank_account_id": {"type": "string"}, "amount": {"$ref": "#/$defs/nonnegative_money"}, "currency": {"const": "CNY"}}
+    },
+    "fraud_decision_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_amount", "target_period"],
+      "properties": {"target_amount": {"$ref": "#/$defs/nonnegative_money"}, "target_period": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$"}}
+    },
+    "command": {
+      "allOf": [
+        {"$ref": "#/$defs/base_command"},
+        {
+          "oneOf": [
+            {"properties": {"command_type": {"const": "EstablishCustomerCommitment"}, "payload": {"$ref": "#/$defs/commitment_payload"}}},
+            {"properties": {"command_type": {"const": "CreateSalesOrder"}, "payload": {"$ref": "#/$defs/order_payload"}}},
+            {"properties": {"command_type": {"const": "DispatchPhysicalGoods"}, "payload": {"$ref": "#/$defs/dispatch_payload"}}},
+            {"properties": {"command_type": {"const": "RecordShipment"}, "payload": {"$ref": "#/$defs/shipment_payload"}}},
+            {"properties": {"command_type": {"const": "IssueSalesInvoice"}, "payload": {"$ref": "#/$defs/invoice_payload"}}},
+            {"properties": {"command_type": {"const": "ReceiveCustomerPayment"}, "payload": {"$ref": "#/$defs/payment_payload"}}},
+            {"properties": {"command_type": {"const": "RecordCustomerReceipt"}, "payload": {"$ref": "#/$defs/receipt_payload"}}},
+            {"properties": {"command_type": {"const": "RecordFraudDecision"}, "payload": {"$ref": "#/$defs/fraud_decision_payload"}}}
+          ]
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_type", "aggregate_id", "sequence_in_commit", "payload"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "event_type": {"type": "string", "minLength": 1},
+        "aggregate_id": {"type": "string", "minLength": 1},
+        "sequence_in_commit": {"type": "integer", "minimum": 1},
+        "payload": {"type": "object", "minProperties": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"event_type": {"const": "CustomerCommitmentEstablished"}}, "required": ["event_type"]},
+          "then": {
+            "properties": {
+              "payload": {
+                "required": ["commitment_id", "company_id", "customer_id", "product_id", "quantity", "fixed_consideration", "currency", "delivery_term", "expires_at"]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step_id", "branch_id", "command", "expected_events", "expected_state_ref"],
+      "properties": {
+        "step_id": {"type": "string"},
+        "branch_id": {"enum": ["ancestor-001", "baseline-001", "fraud-001"]},
+        "command": {"$ref": "#/$defs/command"},
+        "expected_events": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/event"}},
+        "expected_state_ref": {"type": "string"}
+      }
+    },
+    "journal_line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line_id", "account", "debit_amount", "credit_amount"],
+      "properties": {
+        "line_id": {"type": "string"}, "account": {"type": "string"},
+        "debit_amount": {"$ref": "#/$defs/nonnegative_money"}, "credit_amount": {"$ref": "#/$defs/nonnegative_money"}
+      }
+    },
+    "journal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["journal_id", "ledger_type", "accounting_case_key", "input_event_ids", "input_lineage", "accounting_date", "lines", "accounting_content_digest", "lineage_digest"],
+      "properties": {
+        "journal_id": {"type": "string"}, "ledger_type": {"enum": ["reported", "normative"]},
+        "accounting_case_key": {"type": "string"}, "input_event_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "input_lineage": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/input_lineage"}},
+        "accounting_date": {"type": "string", "format": "date"}, "lines": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/journal_line"}},
+        "accounting_content_digest": {"$ref": "#/$defs/sha256"},
+        "lineage_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "input_lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_role", "event_semantic_id"],
+      "properties": {
+        "input_role": {"enum": ["control_transfer", "settlement_right", "shipment_record", "sales_invoice", "customer_payment", "customer_receipt"]},
+        "event_semantic_id": {"type": "string", "minLength": 1}
+      }
+    },
+    "pending_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accounting_case_key", "status", "observed_input_event_ids", "evaluation_count", "journal_count"],
+      "properties": {
+        "accounting_case_key": {"type": "string"}, "status": {"const": "pending"},
+        "observed_input_event_ids": {"$ref": "#/$defs/string_array"},
+        "evaluation_count": {"type": "integer", "minimum": 0}, "journal_count": {"const": 0}
+      }
+    },
+    "misstatement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id", "item", "misstatement_amount", "direction"],
+      "properties": {
+        "object_id": {"type": "string"}, "item": {"type": "string"},
+        "misstatement_amount": {"$ref": "#/$defs/money"}, "direction": {"enum": ["overstated", "understated", "none"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"direction": {"const": "overstated"}}},
+          "then": {"properties": {"misstatement_amount": {"pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]*\\.[0-9]{2})$"}}}
+        },
+        {
+          "if": {"properties": {"direction": {"const": "understated"}}},
+          "then": {"properties": {"misstatement_amount": {"pattern": "^-(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]*\\.[0-9]{2})$"}}}
+        },
+        {
+          "if": {"properties": {"direction": {"const": "none"}}},
+          "then": {"properties": {"misstatement_amount": {"const": "0.00"}}}
+        }
+      ]
+    },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id", "intent_class", "record_truth_status", "causal_role", "misstatement_status"],
+      "properties": {
+        "object_id": {"type": "string"},
+        "intent_class": {"enum": ["normal", "error", "intentional", "not_applicable"]},
+        "record_truth_status": {"enum": ["truthful", "fabricated", "omitted", "amount_incorrect", "not_applicable"]},
+        "causal_role": {"enum": ["direct_action", "concealment", "downstream_effect", "exposure", "correction", "unrelated"]},
+        "misstatement_status": {"enum": ["none", "overstated", "understated", "not_applicable"]}
+      }
+    },
+    "visibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id", "observer_profile_id", "observation_cutoff", "view_policy_version", "access_status", "temporal_status"],
+      "properties": {
+        "object_id": {"type": "string"},
+        "observer_profile_id": {"enum": ["ordinary_business_v1", "restricted_research_v1"]},
+        "observation_cutoff": {"type": "string", "format": "date-time"},
+        "view_policy_version": {"const": "1"},
+        "access_status": {"enum": ["allowed", "restricted"]},
+        "temporal_status": {"enum": ["available", "not_yet_available"]}
+      }
+    },
+    "decision_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_spec_id", "version", "input_fields", "normalization", "decision_id_template", "distribution", "random_algorithm"],
+      "properties": {
+        "decision_spec_id": {"enum": ["payment_delay_v1", "post_fraud_collection_v1"]},
+        "version": {"const": 1}, "input_fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "normalization": {"type": "string", "minLength": 1}, "decision_id_template": {"type": "string", "minLength": 1},
+        "distribution": {"type": "string", "minLength": 1}, "random_algorithm": {"const": "HMAC-SHA256-first-u64-be"}
+      }
+    },
+    "determinism_tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_order_permutations", "command_retries", "case_lifecycle"],
+      "properties": {
+        "event_order_permutations": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {"contains": {"properties": {"comparison_group": {"const": "reported_year_end"}}, "required": ["comparison_group"]}, "minContains": 2, "maxContains": 2},
+            {"contains": {"properties": {"comparison_group": {"const": "normative_year_end"}}, "required": ["comparison_group"]}, "minContains": 2, "maxContains": 2}
+          ],
+          "items": {"$ref": "#/$defs/event_order_permutation"}
+        },
+        "command_retries": {"type": "array", "minItems": 4, "items": {"type": "object", "required": ["command_ref", "mutation", "expected_result", "expected_new_events", "expected_new_journals"]}},
+        "case_lifecycle": {"type": "array", "minItems": 5, "items": {"type": "object", "required": ["action"]}}
+      }
+    },
+    "event_order_permutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "comparison_group", "event_refs", "expected_journal_ids", "expected_accounting_content_digest_equal", "expected_lineage_digest_equal"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "comparison_group": {"enum": ["reported_year_end", "normative_year_end"]},
+        "event_refs": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "expected_journal_ids": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+        "expected_accounting_content_digest_equal": {"const": true},
+        "expected_lineage_digest_equal": {"const": true}
+      }
+    },
+    "counterfactual_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "decision_spec_id"],
+      "properties": {
+        "name": {"enum": ["shared_state_shared_random", "causal_branch_random", "raw_branch_id_forbidden"]},
+        "decision_spec_id": {"enum": ["payment_delay_v1", "post_fraud_collection_v1"]},
+        "root_seed": {"const": "golden-seed-001"},
+        "counterfactual_key": {"type": "string", "minLength": 1},
+        "normalized_input": {"type": "object", "minProperties": 1},
+        "expected_state_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "expected_decision_id": {"type": "string", "minLength": 1},
+        "expected_random_key": {"type": "string", "minLength": 1},
+        "expected_random_hex": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "expected_random_equal": {"const": true},
+        "cause_event_id": {"type": "string", "minLength": 1},
+        "causal_ancestor_semantic_keys": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "expected_causal_context_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "expected_causal_edge": {"const": true},
+        "attempted_key_part": {"const": "branch_id"},
+        "expected_result": {"const": "InvalidRandomScope"}
+      },
+      "oneOf": [
+        {"properties": {"name": {"const": "shared_state_shared_random"}, "decision_spec_id": {"const": "payment_delay_v1"}}, "required": ["root_seed", "counterfactual_key", "normalized_input", "expected_state_digest", "expected_decision_id", "expected_random_key", "expected_random_hex", "expected_random_equal"]},
+        {"properties": {"name": {"const": "causal_branch_random"}, "decision_spec_id": {"const": "post_fraud_collection_v1"}}, "required": ["root_seed", "counterfactual_key", "normalized_input", "expected_state_digest", "expected_decision_id", "cause_event_id", "causal_ancestor_semantic_keys", "expected_causal_context_id", "expected_random_key", "expected_random_hex", "expected_causal_edge"]},
+        {"properties": {"name": {"const": "raw_branch_id_forbidden"}}, "required": ["attempted_key_part", "expected_result"]}
+      ]
+    },
+    "release_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_major_version", "branch_pair_id", "branch_id", "shared_history_fingerprint"],
+      "properties": {
+        "dataset_major_version": {"type": "integer", "minimum": 1},
+        "branch_pair_id": {"type": "string", "minLength": 1},
+        "branch_id": {"type": "string", "minLength": 1},
+        "shared_history_fingerprint": {"type": "string", "minLength": 1}
+      }
+    },
+    "release_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "existing_members", "candidate", "expected_result"],
+      "properties": {
+        "name": {"enum": ["single_branch_publish_succeeds", "second_twin_publish_rejected", "duplicate_history_fingerprint_rejected"]},
+        "existing_members": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/release_member"}},
+        "candidate": {"$ref": "#/$defs/release_member"},
+        "expected_result": {"enum": ["published", "BranchPairAlreadyPublished", "DuplicateSharedHistoryFingerprint"]}
+      },
+      "oneOf": [
+        {"properties": {"name": {"const": "single_branch_publish_succeeds"}, "existing_members": {"maxItems": 0}, "expected_result": {"const": "published"}}},
+        {"properties": {"name": {"const": "second_twin_publish_rejected"}, "existing_members": {"minItems": 1}, "expected_result": {"const": "BranchPairAlreadyPublished"}}},
+        {"properties": {"name": {"const": "duplicate_history_fingerprint_rejected"}, "existing_members": {"minItems": 1}, "expected_result": {"const": "DuplicateSharedHistoryFingerprint"}}}
+      ]
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

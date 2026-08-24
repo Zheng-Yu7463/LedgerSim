@@ -1,0 +1,2715 @@
+{
+  "$schema": "./sales-fraud-v1.schema.json",
+  "schema_version": "1.0.0",
+  "fixture_id": "sales-fraud-v1",
+  "run_id": "run-golden-001",
+  "description": "Executable oracle for a normal sale and a paired year-end fictitious sale.",
+  "currency": "CNY",
+  "timezone": "Asia/Shanghai",
+  "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+  "event_envelope_derivation": {
+    "run_id": "copy(command.run_id)",
+    "branch_id": "copy(command.branch_id)",
+    "actor_id": "copy(command.actor_id)",
+    "causation_id": "copy(command.command_id)",
+    "correlation_id": "copy(command.correlation_id)",
+    "event_occurred_at": "copy(command.requested_at)",
+    "committed_at": "copy(command.requested_at)",
+    "order_within_commit": "sequence_in_commit ascending"
+  },
+  "event_type_registry": {
+    "CustomerCommitmentEstablished": "CustomerCommitment",
+    "SalesOrderCreated": "SalesChain",
+    "AccountingCaseOpened": "AccountingCase",
+    "PhysicalGoodsDispatched": "PhysicalInventory",
+    "ControlTransferred": "CustomerCommitment",
+    "SettlementRightEstablished": "CustomerCommitment",
+    "ShipmentRecordAccepted": "ShipmentRecord",
+    "SalesInvoiceIssued": "SalesInvoice",
+    "CustomerPaymentReceived": "BankTransaction",
+    "CustomerReceiptRecorded": "CustomerReceipt",
+    "ReportedJournalPosted": "ReportedJournal",
+    "NormativeJournalPosted": "NormativeJournal",
+    "FraudDecisionRecorded": "FraudDecision"
+  },
+  "branches": [
+    {
+      "branch_id": "ancestor-001",
+      "parent_branch_id": null
+    },
+    {
+      "branch_id": "baseline-001",
+      "parent_branch_id": "ancestor-001"
+    },
+    {
+      "branch_id": "fraud-001",
+      "parent_branch_id": "ancestor-001"
+    }
+  ],
+  "policy": {
+    "sales_rule_version": "sales-v1",
+    "delivery_term": "dispatch_point",
+    "fixed_consideration": true,
+    "customer_acceptance_required": false,
+    "right_of_return": false,
+    "variable_consideration": false,
+    "partial_delivery": false,
+    "reported_revenue_inputs": [
+      "ShipmentRecordAccepted",
+      "SalesInvoiceIssued"
+    ],
+    "reported_cogs_inputs": [
+      "ShipmentRecordAccepted",
+      "SalesInvoiceIssued"
+    ],
+    "normative_revenue_inputs": [
+      "ControlTransferred",
+      "SettlementRightEstablished"
+    ],
+    "normative_cogs_inputs": [
+      "ControlTransferred",
+      "SettlementRightEstablished"
+    ],
+    "rounding": "ROUND_HALF_UP"
+  },
+  "master_data": {
+    "company_id": "company-001",
+    "customer_id": "customer-001",
+    "product_id": "product-001",
+    "currency": "CNY",
+    "unit_price": "120.0000",
+    "unit_cost": "80.000000"
+  },
+  "chart_of_accounts": [
+    {
+      "account": "bank",
+      "normal_balance": "debit"
+    },
+    {
+      "account": "accounts_receivable",
+      "normal_balance": "debit"
+    },
+    {
+      "account": "inventory",
+      "normal_balance": "debit"
+    },
+    {
+      "account": "paid_in_capital",
+      "normal_balance": "credit"
+    },
+    {
+      "account": "sales_revenue",
+      "normal_balance": "credit"
+    },
+    {
+      "account": "cost_of_goods_sold",
+      "normal_balance": "debit"
+    }
+  ],
+  "opening_balances": {
+    "reported": {
+      "bank": "34000.00",
+      "accounts_receivable": "0.00",
+      "inventory": "16000.00",
+      "paid_in_capital": "50000.00",
+      "sales_revenue": "0.00",
+      "cost_of_goods_sold": "0.00",
+      "profit": "0.00"
+    },
+    "normative": {
+      "bank": "34000.00",
+      "accounts_receivable": "0.00",
+      "inventory": "16000.00",
+      "paid_in_capital": "50000.00",
+      "sales_revenue": "0.00",
+      "cost_of_goods_sold": "0.00",
+      "profit": "0.00"
+    },
+    "physical_inventory_quantity": "200.0000",
+    "recorded_inventory_quantity": "200.0000"
+  },
+  "decision_specs": [
+    {
+      "decision_spec_id": "payment_delay_v1",
+      "version": 1,
+      "input_fields": [
+        "customer_id",
+        "period",
+        "occurrence_index",
+        "payment_capacity"
+      ],
+      "normalization": "UTF-8 canonical JSON with lexicographically sorted keys and schema-normalized values",
+      "decision_id_template": "payment-delay|{customer_id}|{period}|{occurrence_index}",
+      "distribution": "uniform_integer_days_0_30",
+      "random_algorithm": "HMAC-SHA256-first-u64-be"
+    },
+    {
+      "decision_spec_id": "post_fraud_collection_v1",
+      "version": 1,
+      "input_fields": [
+        "customer_id",
+        "period",
+        "occurrence_index",
+        "collection_state",
+        "causal_context_id"
+      ],
+      "normalization": "UTF-8 canonical JSON with lexicographically sorted keys and schema-normalized values",
+      "decision_id_template": "post-fraud-collection|{customer_id}|{period}|{occurrence_index}",
+      "distribution": "uniform_integer_days_0_90",
+      "random_algorithm": "HMAC-SHA256-first-u64-be"
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "common-001",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-commitment-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "customer-001",
+        "command_type": "EstablishCustomerCommitment",
+        "requested_at": "2026-03-01T01:00:00.000000Z",
+        "aggregate_id": "commitment-common-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "50.0000",
+          "fixed_consideration": "6000.00",
+          "currency": "CNY",
+          "delivery_term": "dispatch_point",
+          "expires_at": "2026-03-31T16:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-001",
+          "event_type": "CustomerCommitmentEstablished",
+          "aggregate_id": "commitment-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "commitment_id": "commitment-common-001",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "quantity": "50.0000",
+            "fixed_consideration": "6000.00",
+            "currency": "CNY",
+            "delivery_term": "dispatch_point",
+            "expires_at": "2026-03-31T16:00:00.000000Z"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-001"
+    },
+    {
+      "step_id": "common-002",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-order-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "CreateSalesOrder",
+        "requested_at": "2026-03-01T02:00:00.000000Z",
+        "aggregate_id": "sales-chain-common-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "claimed_commitment_id": "commitment-common-001",
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "50.0000",
+          "unit_price": "120.0000",
+          "currency": "CNY"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-002",
+          "event_type": "SalesOrderCreated",
+          "aggregate_id": "sales-chain-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "claimed_commitment_id": "commitment-common-001",
+            "quantity": "50.0000",
+            "unit_price": "120.0000",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-common-case-001",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-common-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1"
+          }
+        },
+        {
+          "event_id": "evt-common-case-002",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-common-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1"
+          }
+        },
+        {
+          "event_id": "evt-common-case-003",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-common-revenue-001",
+          "sequence_in_commit": 4,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1"
+          }
+        },
+        {
+          "event_id": "evt-common-case-004",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-common-cogs-001",
+          "sequence_in_commit": 5,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-002"
+    },
+    {
+      "step_id": "common-003",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-dispatch-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "warehouse-employee-001",
+        "command_type": "DispatchPhysicalGoods",
+        "requested_at": "2026-03-02T02:00:00.000000Z",
+        "aggregate_id": "fulfillment-common-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-common-001",
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "commitment_id": "commitment-common-001",
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "50.0000",
+          "currency": "CNY",
+          "dispatched_at": "2026-03-02T02:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-003",
+          "event_type": "PhysicalGoodsDispatched",
+          "aggregate_id": "fulfillment-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "commitment_id": "commitment-common-001",
+            "quantity": "50.0000",
+            "dispatched_at": "2026-03-02T02:00:00.000000Z",
+            "normative_cost_snapshot_id": "cost-norm-common-001",
+            "unit_cost": "80.000000"
+          }
+        },
+        {
+          "event_id": "evt-common-004",
+          "event_type": "ControlTransferred",
+          "aggregate_id": "commitment-common-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "commitment_id": "commitment-common-001",
+            "dispatch_event_id": "evt-common-003",
+            "quantity": "50.0000"
+          }
+        },
+        {
+          "event_id": "evt-common-005",
+          "event_type": "SettlementRightEstablished",
+          "aggregate_id": "commitment-common-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "settlement_right_id": "settlement-right-common-001",
+            "business_chain_id": "sales-chain-common-001",
+            "commitment_id": "commitment-common-001",
+            "control_event_id": "evt-common-004",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "quantity": "50.0000",
+            "fixed_consideration": "6000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-common-006",
+          "event_type": "NormativeJournalPosted",
+          "aggregate_id": "journal-norm-common-revenue-001",
+          "sequence_in_commit": 4,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1",
+            "journal_id": "journal-norm-common-revenue-001"
+          }
+        },
+        {
+          "event_id": "evt-common-007",
+          "event_type": "NormativeJournalPosted",
+          "aggregate_id": "journal-norm-common-cogs-001",
+          "sequence_in_commit": 5,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1",
+            "journal_id": "journal-norm-common-cogs-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-003"
+    },
+    {
+      "step_id": "common-004",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-shipment-record-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "warehouse-employee-001",
+        "command_type": "RecordShipment",
+        "requested_at": "2026-03-02T02:05:00.000000Z",
+        "aggregate_id": "shipment-common-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-common-001",
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "50.0000",
+          "claimed_effective_at": "2026-03-02T02:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-008",
+          "event_type": "ShipmentRecordAccepted",
+          "aggregate_id": "shipment-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "quantity": "50.0000",
+            "claimed_effective_at": "2026-03-02T02:00:00.000000Z",
+            "reported_cost_snapshot_id": "cost-report-common-001",
+            "unit_cost": "80.000000"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-004"
+    },
+    {
+      "step_id": "common-005",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-invoice-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "IssueSalesInvoice",
+        "requested_at": "2026-03-02T02:10:00.000000Z",
+        "aggregate_id": "invoice-common-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-common-001",
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "50.0000",
+          "unit_price": "120.0000",
+          "net_amount": "6000.00",
+          "tax_amount": "0.00",
+          "currency": "CNY",
+          "invoice_date": "2026-03-02"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-009",
+          "event_type": "SalesInvoiceIssued",
+          "aggregate_id": "invoice-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "quantity": "50.0000",
+            "net_amount": "6000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-common-010",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-common-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1",
+            "journal_id": "journal-report-common-revenue-001"
+          }
+        },
+        {
+          "event_id": "evt-common-011",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-common-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1",
+            "journal_id": "journal-report-common-cogs-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-005"
+    },
+    {
+      "step_id": "common-006",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-payment-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "customer-001",
+        "command_type": "ReceiveCustomerPayment",
+        "requested_at": "2026-03-20T02:00:00.000000Z",
+        "aggregate_id": "payment-common-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-common-001",
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "settlement_right_id": "settlement-right-common-001",
+          "bank_account_id": "bank-001",
+          "amount": "6000.00",
+          "currency": "CNY"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-012",
+          "event_type": "CustomerPaymentReceived",
+          "aggregate_id": "payment-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "settlement_right_id": "settlement-right-common-001",
+            "settlement_right_event_id": "evt-common-005",
+            "amount": "6000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-common-013",
+          "event_type": "NormativeJournalPosted",
+          "aggregate_id": "journal-norm-common-payment-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_customer_payment_v1|sales-chain-common-001|1",
+            "journal_id": "journal-norm-common-payment-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-006"
+    },
+    {
+      "step_id": "common-007",
+      "branch_id": "ancestor-001",
+      "command": {
+        "command_id": "cmd-common-receipt-record-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "ancestor-001",
+        "actor_id": "treasury-employee-001",
+        "command_type": "RecordCustomerReceipt",
+        "requested_at": "2026-03-20T02:05:00.000000Z",
+        "aggregate_id": "receipt-common-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-common-001",
+        "correlation_id": "corr-common-sale-001",
+        "payload": {
+          "invoice_id": "invoice-common-001",
+          "bank_account_id": "bank-001",
+          "amount": "6000.00",
+          "currency": "CNY"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-common-014",
+          "event_type": "CustomerReceiptRecorded",
+          "aggregate_id": "receipt-common-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-common-001",
+            "invoice_id": "invoice-common-001",
+            "amount": "6000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-common-015",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-common-payment-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_customer_payment_v1|sales-chain-common-001|1",
+            "journal_id": "journal-report-common-payment-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-common-007"
+    },
+    {
+      "step_id": "baseline-001",
+      "branch_id": "baseline-001",
+      "command": {
+        "command_id": "cmd-baseline-commitment-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "baseline-001",
+        "actor_id": "customer-001",
+        "command_type": "EstablishCustomerCommitment",
+        "requested_at": "2026-12-27T01:00:00.000000Z",
+        "aggregate_id": "commitment-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "fixed_consideration": "12000.00",
+          "currency": "CNY",
+          "delivery_term": "dispatch_point",
+          "expires_at": "2027-01-31T16:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-baseline-001",
+          "event_type": "CustomerCommitmentEstablished",
+          "aggregate_id": "commitment-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "commitment_id": "commitment-year-end-001",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "quantity": "100.0000",
+            "fixed_consideration": "12000.00",
+            "currency": "CNY",
+            "delivery_term": "dispatch_point",
+            "expires_at": "2027-01-31T16:00:00.000000Z"
+          }
+        }
+      ],
+      "expected_state_ref": "state-baseline-001"
+    },
+    {
+      "step_id": "baseline-002",
+      "branch_id": "baseline-001",
+      "command": {
+        "command_id": "cmd-baseline-order-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "baseline-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "CreateSalesOrder",
+        "requested_at": "2026-12-28T01:00:00.000000Z",
+        "aggregate_id": "sales-chain-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "claimed_commitment_id": "commitment-year-end-001",
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "unit_price": "120.0000",
+          "currency": "CNY"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-baseline-002",
+          "event_type": "SalesOrderCreated",
+          "aggregate_id": "sales-chain-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "claimed_commitment_id": "commitment-year-end-001",
+            "quantity": "100.0000",
+            "unit_price": "120.0000",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-baseline-case-001",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-baseline-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-baseline-case-002",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-baseline-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-baseline-case-003",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-baseline-revenue-001",
+          "sequence_in_commit": 4,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-baseline-case-004",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-baseline-cogs-001",
+          "sequence_in_commit": 5,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1"
+          }
+        }
+      ],
+      "expected_state_ref": "state-baseline-002"
+    },
+    {
+      "step_id": "baseline-003",
+      "branch_id": "baseline-001",
+      "command": {
+        "command_id": "cmd-baseline-dispatch-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "baseline-001",
+        "actor_id": "warehouse-employee-001",
+        "command_type": "DispatchPhysicalGoods",
+        "requested_at": "2026-12-29T01:00:00.000000Z",
+        "aggregate_id": "fulfillment-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-year-end-001",
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "commitment_id": "commitment-year-end-001",
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "currency": "CNY",
+          "dispatched_at": "2026-12-29T01:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-baseline-003",
+          "event_type": "PhysicalGoodsDispatched",
+          "aggregate_id": "fulfillment-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "commitment_id": "commitment-year-end-001",
+            "quantity": "100.0000",
+            "normative_cost_snapshot_id": "cost-norm-year-end-001",
+            "unit_cost": "80.000000",
+            "dispatched_at": "2026-12-29T01:00:00.000000Z"
+          }
+        },
+        {
+          "event_id": "evt-baseline-004",
+          "event_type": "ControlTransferred",
+          "aggregate_id": "commitment-year-end-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "commitment_id": "commitment-year-end-001",
+            "dispatch_event_id": "evt-baseline-003",
+            "quantity": "100.0000"
+          }
+        },
+        {
+          "event_id": "evt-baseline-005",
+          "event_type": "SettlementRightEstablished",
+          "aggregate_id": "commitment-year-end-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "settlement_right_id": "settlement-right-year-end-001",
+            "business_chain_id": "sales-chain-year-end-001",
+            "commitment_id": "commitment-year-end-001",
+            "control_event_id": "evt-baseline-004",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "quantity": "100.0000",
+            "fixed_consideration": "12000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-baseline-006",
+          "event_type": "NormativeJournalPosted",
+          "aggregate_id": "journal-norm-baseline-revenue-001",
+          "sequence_in_commit": 4,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-norm-baseline-revenue-001"
+          }
+        },
+        {
+          "event_id": "evt-baseline-007",
+          "event_type": "NormativeJournalPosted",
+          "aggregate_id": "journal-norm-baseline-cogs-001",
+          "sequence_in_commit": 5,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-norm-baseline-cogs-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-baseline-003"
+    },
+    {
+      "step_id": "baseline-004",
+      "branch_id": "baseline-001",
+      "command": {
+        "command_id": "cmd-baseline-shipment-record-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "baseline-001",
+        "actor_id": "warehouse-employee-001",
+        "command_type": "RecordShipment",
+        "requested_at": "2026-12-29T01:05:00.000000Z",
+        "aggregate_id": "shipment-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-year-end-001",
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "claimed_effective_at": "2026-12-29T01:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-baseline-008",
+          "event_type": "ShipmentRecordAccepted",
+          "aggregate_id": "shipment-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "quantity": "100.0000",
+            "claimed_effective_at": "2026-12-29T01:00:00.000000Z",
+            "reported_cost_snapshot_id": "cost-report-year-end-001",
+            "unit_cost": "80.000000"
+          }
+        }
+      ],
+      "expected_state_ref": "state-baseline-004"
+    },
+    {
+      "step_id": "baseline-005",
+      "branch_id": "baseline-001",
+      "command": {
+        "command_id": "cmd-baseline-invoice-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "baseline-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "IssueSalesInvoice",
+        "requested_at": "2026-12-29T01:10:00.000000Z",
+        "aggregate_id": "invoice-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-year-end-001",
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "unit_price": "120.0000",
+          "net_amount": "12000.00",
+          "tax_amount": "0.00",
+          "currency": "CNY",
+          "invoice_date": "2026-12-29"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-baseline-009",
+          "event_type": "SalesInvoiceIssued",
+          "aggregate_id": "invoice-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "quantity": "100.0000",
+            "net_amount": "12000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-baseline-010",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-baseline-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-report-baseline-revenue-001"
+          }
+        },
+        {
+          "event_id": "evt-baseline-011",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-baseline-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-report-baseline-cogs-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-baseline-005"
+    },
+    {
+      "step_id": "fraud-001",
+      "branch_id": "fraud-001",
+      "command": {
+        "command_id": "cmd-fraud-decision-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "fraud-001",
+        "actor_id": "management-employee-001",
+        "command_type": "RecordFraudDecision",
+        "requested_at": "2026-12-27T01:00:00.000000Z",
+        "aggregate_id": "fraud-decision-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "target_amount": "12000.00",
+          "target_period": "2026-12"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-fraud-001",
+          "event_type": "FraudDecisionRecorded",
+          "aggregate_id": "fraud-decision-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "target_amount": "12000.00",
+            "target_period": "2026-12"
+          }
+        }
+      ],
+      "expected_state_ref": "state-fraud-001"
+    },
+    {
+      "step_id": "fraud-002",
+      "branch_id": "fraud-001",
+      "command": {
+        "command_id": "cmd-fraud-order-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "fraud-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "CreateSalesOrder",
+        "requested_at": "2026-12-28T01:00:00.000000Z",
+        "aggregate_id": "sales-chain-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": null,
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "claimed_commitment_id": "commitment-year-end-001",
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "unit_price": "120.0000",
+          "currency": "CNY"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-fraud-002",
+          "event_type": "SalesOrderCreated",
+          "aggregate_id": "sales-chain-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "claimed_commitment_id": "commitment-year-end-001",
+            "quantity": "100.0000",
+            "unit_price": "120.0000",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-fraud-case-001",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-fraud-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-fraud-case-002",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-report-fraud-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-fraud-case-003",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-fraud-revenue-001",
+          "sequence_in_commit": 4,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1"
+          }
+        },
+        {
+          "event_id": "evt-fraud-case-004",
+          "event_type": "AccountingCaseOpened",
+          "aggregate_id": "case-norm-fraud-cogs-001",
+          "sequence_in_commit": 5,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1"
+          }
+        }
+      ],
+      "expected_state_ref": "state-fraud-002"
+    },
+    {
+      "step_id": "fraud-003",
+      "branch_id": "fraud-001",
+      "command": {
+        "command_id": "cmd-fraud-shipment-record-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "fraud-001",
+        "actor_id": "warehouse-employee-001",
+        "command_type": "RecordShipment",
+        "requested_at": "2026-12-29T01:05:00.000000Z",
+        "aggregate_id": "shipment-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-year-end-001",
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "claimed_effective_at": "2026-12-29T01:00:00.000000Z"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-fraud-003",
+          "event_type": "ShipmentRecordAccepted",
+          "aggregate_id": "shipment-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "quantity": "100.0000",
+            "claimed_effective_at": "2026-12-29T01:00:00.000000Z",
+            "reported_cost_snapshot_id": "cost-report-year-end-001",
+            "unit_cost": "80.000000"
+          }
+        }
+      ],
+      "expected_state_ref": "state-fraud-003"
+    },
+    {
+      "step_id": "fraud-004",
+      "branch_id": "fraud-001",
+      "command": {
+        "command_id": "cmd-fraud-invoice-001",
+        "schema_version": "1.0.0",
+        "run_id": "run-golden-001",
+        "branch_id": "fraud-001",
+        "actor_id": "sales-employee-001",
+        "command_type": "IssueSalesInvoice",
+        "requested_at": "2026-12-29T01:10:00.000000Z",
+        "aggregate_id": "invoice-year-end-001",
+        "expected_version": 0,
+        "business_chain_id": "sales-chain-year-end-001",
+        "correlation_id": "corr-year-end-sale-001",
+        "payload": {
+          "company_id": "company-001",
+          "customer_id": "customer-001",
+          "product_id": "product-001",
+          "quantity": "100.0000",
+          "unit_price": "120.0000",
+          "net_amount": "12000.00",
+          "tax_amount": "0.00",
+          "currency": "CNY",
+          "invoice_date": "2026-12-29"
+        }
+      },
+      "expected_events": [
+        {
+          "event_id": "evt-fraud-004",
+          "event_type": "SalesInvoiceIssued",
+          "aggregate_id": "invoice-year-end-001",
+          "sequence_in_commit": 1,
+          "payload": {
+            "business_chain_id": "sales-chain-year-end-001",
+            "quantity": "100.0000",
+            "net_amount": "12000.00",
+            "currency": "CNY"
+          }
+        },
+        {
+          "event_id": "evt-fraud-005",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-fraud-revenue-001",
+          "sequence_in_commit": 2,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-report-fraud-revenue-001"
+          }
+        },
+        {
+          "event_id": "evt-fraud-006",
+          "event_type": "ReportedJournalPosted",
+          "aggregate_id": "journal-report-fraud-cogs-001",
+          "sequence_in_commit": 3,
+          "payload": {
+            "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
+            "journal_id": "journal-report-fraud-cogs-001"
+          }
+        }
+      ],
+      "expected_state_ref": "state-fraud-004"
+    }
+  ],
+  "state_snapshots": {
+    "state-common-001": {
+      "economic": {
+        "physical_inventory_quantity": "200.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "34000.00"
+      },
+      "enterprise": {
+        "orders": [],
+        "shipments": [],
+        "invoices": [],
+        "receipts": [],
+        "recorded_inventory_quantity": "200.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      },
+      "normative": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      }
+    },
+    "state-common-002": {
+      "economic": {
+        "physical_inventory_quantity": "200.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "34000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [],
+        "invoices": [],
+        "receipts": [],
+        "recorded_inventory_quantity": "200.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      },
+      "normative": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      }
+    },
+    "state-common-003": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-common-001"
+        ],
+        "bank": "34000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [],
+        "invoices": [],
+        "receipts": [],
+        "recorded_inventory_quantity": "200.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      },
+      "normative": {
+        "bank": "34000.00",
+        "accounts_receivable": "6000.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-common-004": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-common-001"
+        ],
+        "bank": "34000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [],
+        "receipts": [],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "16000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "0.00",
+        "cost_of_goods_sold": "0.00",
+        "profit": "0.00"
+      },
+      "normative": {
+        "bank": "34000.00",
+        "accounts_receivable": "6000.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-common-005": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-common-001"
+        ],
+        "bank": "34000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "6000.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "34000.00",
+        "accounts_receivable": "6000.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-common-006": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "34000.00",
+        "accounts_receivable": "6000.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-common-007": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-baseline-001": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001",
+          "commitment-year-end-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-baseline-002": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001",
+          "commitment-year-end-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      }
+    },
+    "state-baseline-003": {
+      "economic": {
+        "physical_inventory_quantity": "50.0000",
+        "commitments": [
+          "commitment-common-001",
+          "commitment-year-end-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-year-end-001"
+        ],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "12000.00",
+        "inventory": "4000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "18000.00",
+        "cost_of_goods_sold": "12000.00",
+        "profit": "6000.00"
+      }
+    },
+    "state-baseline-004": {
+      "economic": {
+        "physical_inventory_quantity": "50.0000",
+        "commitments": [
+          "commitment-common-001",
+          "commitment-year-end-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-year-end-001"
+        ],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001",
+          "shipment-year-end-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "50.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "12000.00",
+        "inventory": "4000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "18000.00",
+        "cost_of_goods_sold": "12000.00",
+        "profit": "6000.00"
+      }
+    },
+    "state-baseline-005": {
+      "economic": {
+        "physical_inventory_quantity": "50.0000",
+        "commitments": [
+          "commitment-common-001",
+          "commitment-year-end-001"
+        ],
+        "settlement_rights": [
+          "settlement-right-year-end-001"
+        ],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001",
+          "shipment-year-end-001"
+        ],
+        "invoices": [
+          "invoice-common-001",
+          "invoice-year-end-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "50.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "12000.00",
+        "inventory": "4000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "18000.00",
+        "cost_of_goods_sold": "12000.00",
+        "profit": "6000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "12000.00",
+        "inventory": "4000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "18000.00",
+        "cost_of_goods_sold": "12000.00",
+        "profit": "6000.00"
+      }
+    },
+    "state-fraud-001": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "truth": {
+        "fraud_decisions": [
+          "fraud-decision-001"
+        ]
+      }
+    },
+    "state-fraud-002": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "150.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "truth": {
+        "fraud_decisions": [
+          "fraud-decision-001"
+        ]
+      }
+    },
+    "state-fraud-003": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001",
+          "shipment-year-end-001"
+        ],
+        "invoices": [
+          "invoice-common-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "50.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "truth": {
+        "fraud_decisions": [
+          "fraud-decision-001"
+        ]
+      }
+    },
+    "state-fraud-004": {
+      "economic": {
+        "physical_inventory_quantity": "150.0000",
+        "commitments": [
+          "commitment-common-001"
+        ],
+        "settlement_rights": [],
+        "bank": "40000.00"
+      },
+      "enterprise": {
+        "orders": [
+          "sales-chain-common-001",
+          "sales-chain-year-end-001"
+        ],
+        "shipments": [
+          "shipment-common-001",
+          "shipment-year-end-001"
+        ],
+        "invoices": [
+          "invoice-common-001",
+          "invoice-year-end-001"
+        ],
+        "receipts": [
+          "receipt-common-001"
+        ],
+        "recorded_inventory_quantity": "50.0000"
+      },
+      "reported": {
+        "bank": "40000.00",
+        "accounts_receivable": "12000.00",
+        "inventory": "4000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "18000.00",
+        "cost_of_goods_sold": "12000.00",
+        "profit": "6000.00"
+      },
+      "normative": {
+        "bank": "40000.00",
+        "accounts_receivable": "0.00",
+        "inventory": "12000.00",
+        "paid_in_capital": "50000.00",
+        "sales_revenue": "6000.00",
+        "cost_of_goods_sold": "4000.00",
+        "profit": "2000.00"
+      },
+      "truth": {
+        "fraud_decisions": [
+          "fraud-decision-001"
+        ]
+      }
+    }
+  },
+  "journals": [
+    {
+      "journal_id": "journal-norm-common-revenue-001",
+      "ledger_type": "normative",
+      "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-004",
+        "evt-common-005"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "control_transfer",
+          "event_semantic_id": "ControlTransferred|sales-chain-common-001"
+        },
+        {
+          "input_role": "settlement_right",
+          "event_semantic_id": "SettlementRightEstablished|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-02",
+      "accounting_content_digest": "d046e5fe0b7ec476aa17bdc174e83f233c8efdaae02a03a5dffec33b2f1044f3",
+      "lineage_digest": "3a5a57178d3a51ff8f09e0be3a4767097cf378393eade9d56727635dda2a8668",
+      "lines": [
+        {
+          "line_id": "line-norm-common-revenue-001",
+          "account": "accounts_receivable",
+          "debit_amount": "6000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-norm-common-revenue-002",
+          "account": "sales_revenue",
+          "debit_amount": "0.00",
+          "credit_amount": "6000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-norm-common-cogs-001",
+      "ledger_type": "normative",
+      "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-004",
+        "evt-common-005"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "control_transfer",
+          "event_semantic_id": "ControlTransferred|sales-chain-common-001"
+        },
+        {
+          "input_role": "settlement_right",
+          "event_semantic_id": "SettlementRightEstablished|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-02",
+      "accounting_content_digest": "e17e291adfc9644a8ab8aac0454579b25d4f4ed16b2c695032b36f797609937c",
+      "lineage_digest": "3a5a57178d3a51ff8f09e0be3a4767097cf378393eade9d56727635dda2a8668",
+      "lines": [
+        {
+          "line_id": "line-norm-common-cogs-001",
+          "account": "cost_of_goods_sold",
+          "debit_amount": "4000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-norm-common-cogs-002",
+          "account": "inventory",
+          "debit_amount": "0.00",
+          "credit_amount": "4000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-common-revenue-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-008",
+        "evt-common-009"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-common-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-02",
+      "accounting_content_digest": "c11c0fe94a1b89bd8a9c4cd13c3321cfeb8eb75ae2fd071c869c940fc1cf9cca",
+      "lineage_digest": "47076e8a9eacb45622edfd8a1100558da198a68008cd536a792fe92915b05609",
+      "lines": [
+        {
+          "line_id": "line-report-common-revenue-001",
+          "account": "accounts_receivable",
+          "debit_amount": "6000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-common-revenue-002",
+          "account": "sales_revenue",
+          "debit_amount": "0.00",
+          "credit_amount": "6000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-common-cogs-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-008",
+        "evt-common-009"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-common-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-02",
+      "accounting_content_digest": "39623eb4bddd79df8ef97bd7ede168b857de4a8e9114442e4f5c3052c808394f",
+      "lineage_digest": "47076e8a9eacb45622edfd8a1100558da198a68008cd536a792fe92915b05609",
+      "lines": [
+        {
+          "line_id": "line-report-common-cogs-001",
+          "account": "cost_of_goods_sold",
+          "debit_amount": "4000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-common-cogs-002",
+          "account": "inventory",
+          "debit_amount": "0.00",
+          "credit_amount": "4000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-norm-common-payment-001",
+      "ledger_type": "normative",
+      "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_customer_payment_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-012"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "customer_payment",
+          "event_semantic_id": "CustomerPaymentReceived|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-20",
+      "accounting_content_digest": "a7501f970e94b49aa2950c6fd3a7c5cbf2a2824a178db9c6d757e8bf9feee545",
+      "lineage_digest": "9b811e930cf37955d5aa7411b6f244d5e89142e052e9b4e5991d0bac1a885204",
+      "lines": [
+        {
+          "line_id": "line-norm-common-payment-001",
+          "account": "bank",
+          "debit_amount": "6000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-norm-common-payment-002",
+          "account": "accounts_receivable",
+          "debit_amount": "0.00",
+          "credit_amount": "6000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-common-payment-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_customer_payment_v1|sales-chain-common-001|1",
+      "input_event_ids": [
+        "evt-common-014"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "customer_receipt",
+          "event_semantic_id": "CustomerReceiptRecorded|sales-chain-common-001"
+        }
+      ],
+      "accounting_date": "2026-03-20",
+      "accounting_content_digest": "474cf8e43fc908d5adcfb2103b03bbd97a29b1a97a23fff73bbc2ef2077e5b9a",
+      "lineage_digest": "d06c52efe99a88f45b007f3989e85eaa7b744e70d99f0696961e1837379efeee",
+      "lines": [
+        {
+          "line_id": "line-report-common-payment-001",
+          "account": "bank",
+          "debit_amount": "6000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-common-payment-002",
+          "account": "accounts_receivable",
+          "debit_amount": "0.00",
+          "credit_amount": "6000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-norm-baseline-revenue-001",
+      "ledger_type": "normative",
+      "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-baseline-004",
+        "evt-baseline-005"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "control_transfer",
+          "event_semantic_id": "ControlTransferred|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "settlement_right",
+          "event_semantic_id": "SettlementRightEstablished|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "4fe6b163706aaa32bb8324eaf5e43e1ad1ff2f0a11477aec7095037334d8d9ba",
+      "lineage_digest": "b542e54337948fb1d1b9887f1186bfcc3d18948ec759968e5b7b9cf1e79e0562",
+      "lines": [
+        {
+          "line_id": "line-norm-baseline-revenue-001",
+          "account": "accounts_receivable",
+          "debit_amount": "12000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-norm-baseline-revenue-002",
+          "account": "sales_revenue",
+          "debit_amount": "0.00",
+          "credit_amount": "12000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-norm-baseline-cogs-001",
+      "ledger_type": "normative",
+      "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-baseline-004",
+        "evt-baseline-005"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "control_transfer",
+          "event_semantic_id": "ControlTransferred|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "settlement_right",
+          "event_semantic_id": "SettlementRightEstablished|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "914f0b5807812424ec69d282ea0a899541a6d1320b1541edfd3ad1d7af6a3439",
+      "lineage_digest": "b542e54337948fb1d1b9887f1186bfcc3d18948ec759968e5b7b9cf1e79e0562",
+      "lines": [
+        {
+          "line_id": "line-norm-baseline-cogs-001",
+          "account": "cost_of_goods_sold",
+          "debit_amount": "8000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-norm-baseline-cogs-002",
+          "account": "inventory",
+          "debit_amount": "0.00",
+          "credit_amount": "8000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-baseline-revenue-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-baseline-008",
+        "evt-baseline-009"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "d73e4f8967e4d322dc62aff9ba36d66134d5448cfbf90ec35d57b18d4fae8278",
+      "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
+      "lines": [
+        {
+          "line_id": "line-report-baseline-revenue-001",
+          "account": "accounts_receivable",
+          "debit_amount": "12000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-baseline-revenue-002",
+          "account": "sales_revenue",
+          "debit_amount": "0.00",
+          "credit_amount": "12000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-baseline-cogs-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-baseline-008",
+        "evt-baseline-009"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "fa259afe177126a19827158f6919c6da03a3e614227d6998e7b4a6595f4fc997",
+      "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
+      "lines": [
+        {
+          "line_id": "line-report-baseline-cogs-001",
+          "account": "cost_of_goods_sold",
+          "debit_amount": "8000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-baseline-cogs-002",
+          "account": "inventory",
+          "debit_amount": "0.00",
+          "credit_amount": "8000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-fraud-revenue-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-fraud-003",
+        "evt-fraud-004"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "d73e4f8967e4d322dc62aff9ba36d66134d5448cfbf90ec35d57b18d4fae8278",
+      "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
+      "lines": [
+        {
+          "line_id": "line-report-fraud-revenue-001",
+          "account": "accounts_receivable",
+          "debit_amount": "12000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-fraud-revenue-002",
+          "account": "sales_revenue",
+          "debit_amount": "0.00",
+          "credit_amount": "12000.00"
+        }
+      ]
+    },
+    {
+      "journal_id": "journal-report-fraud-cogs-001",
+      "ledger_type": "reported",
+      "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
+      "input_event_ids": [
+        "evt-fraud-003",
+        "evt-fraud-004"
+      ],
+      "input_lineage": [
+        {
+          "input_role": "sales_invoice",
+          "event_semantic_id": "SalesInvoiceIssued|sales-chain-year-end-001"
+        },
+        {
+          "input_role": "shipment_record",
+          "event_semantic_id": "ShipmentRecordAccepted|sales-chain-year-end-001"
+        }
+      ],
+      "accounting_date": "2026-12-29",
+      "accounting_content_digest": "fa259afe177126a19827158f6919c6da03a3e614227d6998e7b4a6595f4fc997",
+      "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
+      "lines": [
+        {
+          "line_id": "line-report-fraud-cogs-001",
+          "account": "cost_of_goods_sold",
+          "debit_amount": "8000.00",
+          "credit_amount": "0.00"
+        },
+        {
+          "line_id": "line-report-fraud-cogs-002",
+          "account": "inventory",
+          "debit_amount": "0.00",
+          "credit_amount": "8000.00"
+        }
+      ]
+    }
+  ],
+  "pending_cases": [
+    {
+      "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1",
+      "status": "pending",
+      "observed_input_event_ids": [],
+      "evaluation_count": 0,
+      "journal_count": 0
+    },
+    {
+      "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1",
+      "status": "pending",
+      "observed_input_event_ids": [],
+      "evaluation_count": 0,
+      "journal_count": 0
+    }
+  ],
+  "misstatements": [
+    {
+      "object_id": "balance-accounts-receivable-fraud-001",
+      "item": "accounts_receivable",
+      "misstatement_amount": "12000.00",
+      "direction": "overstated"
+    },
+    {
+      "object_id": "balance-inventory-fraud-001",
+      "item": "inventory",
+      "misstatement_amount": "-8000.00",
+      "direction": "understated"
+    },
+    {
+      "object_id": "statement-sales-revenue-fraud-001",
+      "item": "sales_revenue",
+      "misstatement_amount": "12000.00",
+      "direction": "overstated"
+    },
+    {
+      "object_id": "statement-cogs-fraud-001",
+      "item": "cost_of_goods_sold",
+      "misstatement_amount": "8000.00",
+      "direction": "overstated"
+    },
+    {
+      "object_id": "statement-profit-fraud-001",
+      "item": "profit",
+      "misstatement_amount": "4000.00",
+      "direction": "overstated"
+    }
+  ],
+  "labels": [
+    {
+      "object_id": "evt-fraud-001",
+      "intent_class": "intentional",
+      "record_truth_status": "not_applicable",
+      "causal_role": "direct_action",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "evt-fraud-002",
+      "intent_class": "intentional",
+      "record_truth_status": "fabricated",
+      "causal_role": "direct_action",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "evt-fraud-003",
+      "intent_class": "intentional",
+      "record_truth_status": "fabricated",
+      "causal_role": "direct_action",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "evt-fraud-004",
+      "intent_class": "intentional",
+      "record_truth_status": "fabricated",
+      "causal_role": "direct_action",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "journal-report-fraud-revenue-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "line-report-fraud-revenue-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "overstated"
+    },
+    {
+      "object_id": "line-report-fraud-revenue-002",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "overstated"
+    },
+    {
+      "object_id": "journal-report-fraud-cogs-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "line-report-fraud-cogs-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "overstated"
+    },
+    {
+      "object_id": "line-report-fraud-cogs-002",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "understated"
+    },
+    {
+      "object_id": "balance-accounts-receivable-fraud-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "overstated"
+    },
+    {
+      "object_id": "balance-inventory-fraud-001",
+      "intent_class": "not_applicable",
+      "record_truth_status": "not_applicable",
+      "causal_role": "downstream_effect",
+      "misstatement_status": "understated"
+    }
+  ],
+  "visibility_expectations": [
+    {
+      "object_id": "evt-fraud-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "restricted",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "evt-fraud-002",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "evt-fraud-003",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "evt-fraud-004",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "evt-fraud-001",
+      "observer_profile_id": "restricted_research_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "journal-report-fraud-revenue-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "line-report-fraud-revenue-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "line-report-fraud-revenue-002",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "journal-report-fraud-cogs-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "line-report-fraud-cogs-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "line-report-fraud-cogs-002",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "balance-accounts-receivable-fraud-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    },
+    {
+      "object_id": "balance-inventory-fraud-001",
+      "observer_profile_id": "ordinary_business_v1",
+      "observation_cutoff": "2027-01-10T15:59:59.000000Z",
+      "view_policy_version": "1",
+      "access_status": "allowed",
+      "temporal_status": "available"
+    }
+  ],
+  "determinism_tests": {
+    "event_order_permutations": [
+      {
+        "name": "reported_inputs_shipment_then_invoice",
+        "comparison_group": "reported_year_end",
+        "event_refs": [
+          "evt-fraud-003",
+          "evt-fraud-004"
+        ],
+        "expected_journal_ids": [
+          "journal-report-fraud-revenue-001",
+          "journal-report-fraud-cogs-001"
+        ],
+        "expected_accounting_content_digest_equal": true,
+        "expected_lineage_digest_equal": true
+      },
+      {
+        "name": "reported_inputs_invoice_then_shipment",
+        "comparison_group": "reported_year_end",
+        "event_refs": [
+          "evt-fraud-004",
+          "evt-fraud-003"
+        ],
+        "expected_journal_ids": [
+          "journal-report-fraud-revenue-001",
+          "journal-report-fraud-cogs-001"
+        ],
+        "expected_accounting_content_digest_equal": true,
+        "expected_lineage_digest_equal": true
+      },
+      {
+        "name": "normative_inputs_control_then_right",
+        "comparison_group": "normative_year_end",
+        "event_refs": [
+          "evt-baseline-004",
+          "evt-baseline-005"
+        ],
+        "expected_journal_ids": [
+          "journal-norm-baseline-revenue-001",
+          "journal-norm-baseline-cogs-001"
+        ],
+        "expected_accounting_content_digest_equal": true,
+        "expected_lineage_digest_equal": true
+      },
+      {
+        "name": "normative_inputs_right_then_control",
+        "comparison_group": "normative_year_end",
+        "event_refs": [
+          "evt-baseline-005",
+          "evt-baseline-004"
+        ],
+        "expected_journal_ids": [
+          "journal-norm-baseline-revenue-001",
+          "journal-norm-baseline-cogs-001"
+        ],
+        "expected_accounting_content_digest_equal": true,
+        "expected_lineage_digest_equal": true
+      }
+    ],
+    "command_retries": [
+      {
+        "command_ref": "cmd-fraud-invoice-001",
+        "mutation": "none",
+        "expected_result": "return_original_result",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      },
+      {
+        "command_ref": "cmd-fraud-invoice-001",
+        "mutation": {
+          "payload.net_amount": "13000.00"
+        },
+        "expected_result": "CommandIdConflict",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      },
+      {
+        "command_ref": "cmd-fraud-invoice-001",
+        "mutation": {
+          "requested_at": "2026-12-30T01:10:00.000000Z"
+        },
+        "expected_result": "CommandIdConflict",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      },
+      {
+        "command_ref": "cmd-fraud-invoice-001",
+        "mutation": {
+          "correlation_id": "corr-conflict"
+        },
+        "expected_result": "CommandIdConflict",
+        "expected_new_events": 0,
+        "expected_new_journals": 0
+      }
+    ],
+    "case_lifecycle": [
+      {
+        "action": "repeat_input",
+        "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "expected_status": "posted",
+        "expected_new_journals": 0
+      },
+      {
+        "action": "reverse",
+        "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "expected_status": "reversed",
+        "expected_reversal_count": 1
+      },
+      {
+        "action": "repeat_reverse",
+        "case": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
+        "expected_result": "AccountingCaseAlreadyReversed"
+      },
+      {
+        "action": "open_next_cycle",
+        "predecessor_cycle": 1,
+        "expected_cycle": 2,
+        "expected_status": "pending"
+      },
+      {
+        "action": "repeat_open_next_cycle",
+        "predecessor_cycle": 1,
+        "expected_result": "return_existing_cycle_2"
+      }
+    ]
+  },
+  "counterfactual_tests": [
+    {
+      "name": "shared_state_shared_random",
+      "decision_spec_id": "payment_delay_v1",
+      "root_seed": "golden-seed-001",
+      "counterfactual_key": "pair-001",
+      "normalized_input": {
+        "customer_id": "customer-001",
+        "occurrence_index": 1,
+        "payment_capacity": "normal",
+        "period": "2026-12"
+      },
+      "expected_state_digest": "266b0fd48d7bacd790b6d70e44c9383cfc51b09b58e46909ac276ba8c0c9c255",
+      "expected_decision_id": "payment-delay|customer-001|2026-12|1",
+      "expected_random_key": "pair-001|payment_delay_v1|1|customer-001|2026-12|1",
+      "expected_random_hex": "006365c55f3c2e879aa0d91367b6a6667d86ba1bf28cfdccb6296d73ebb20965",
+      "expected_random_equal": true
+    },
+    {
+      "name": "causal_branch_random",
+      "decision_spec_id": "post_fraud_collection_v1",
+      "root_seed": "golden-seed-001",
+      "counterfactual_key": "pair-001",
+      "normalized_input": {
+        "causal_context_id": "13029d98def97ab2c62f30a8f9bcad26d0ec63e5a7d95426dfd4a93b015178f5",
+        "collection_state": "fraud_receivable_open",
+        "customer_id": "customer-001",
+        "occurrence_index": 1,
+        "period": "2027-01"
+      },
+      "expected_state_digest": "57990eb4c8b4b0e3619d230791933e56a78fb5221d05eec6b052d9fb7ac5c625",
+      "expected_decision_id": "post-fraud-collection|customer-001|2027-01|1",
+      "cause_event_id": "evt-fraud-001",
+      "causal_ancestor_semantic_keys": [
+        "fraud-decision|management-employee-001|2026-12|12000.00"
+      ],
+      "expected_causal_context_id": "13029d98def97ab2c62f30a8f9bcad26d0ec63e5a7d95426dfd4a93b015178f5",
+      "expected_random_key": "pair-001|post_fraud_collection_v1|1|customer-001|2027-01|1|13029d98def97ab2c62f30a8f9bcad26d0ec63e5a7d95426dfd4a93b015178f5",
+      "expected_random_hex": "65d7a4891c2190a10cb85da875b0e8e42785c93db5b0b81ab3ce2b69bc534253",
+      "expected_causal_edge": true
+    },
+    {
+      "name": "raw_branch_id_forbidden",
+      "decision_spec_id": "payment_delay_v1",
+      "attempted_key_part": "branch_id",
+      "expected_result": "InvalidRandomScope"
+    }
+  ],
+  "release_tests": [
+    {
+      "name": "single_branch_publish_succeeds",
+      "existing_members": [],
+      "candidate": {
+        "dataset_major_version": 1,
+        "branch_pair_id": "pair-001",
+        "branch_id": "baseline-001",
+        "shared_history_fingerprint": "ancestor-001-fingerprint"
+      },
+      "expected_result": "published"
+    },
+    {
+      "name": "second_twin_publish_rejected",
+      "existing_members": [
+        {
+          "dataset_major_version": 1,
+          "branch_pair_id": "pair-001",
+          "branch_id": "baseline-001",
+          "shared_history_fingerprint": "ancestor-001-fingerprint"
+        }
+      ],
+      "candidate": {
+        "dataset_major_version": 1,
+        "branch_pair_id": "pair-001",
+        "branch_id": "fraud-001",
+        "shared_history_fingerprint": "ancestor-001-fingerprint"
+      },
+      "expected_result": "BranchPairAlreadyPublished"
+    },
+    {
+      "name": "duplicate_history_fingerprint_rejected",
+      "existing_members": [
+        {
+          "dataset_major_version": 1,
+          "branch_pair_id": "pair-001",
+          "branch_id": "baseline-001",
+          "shared_history_fingerprint": "ancestor-001-fingerprint"
+        }
+      ],
+      "candidate": {
+        "dataset_major_version": 1,
+        "branch_pair_id": "pair-002",
+        "branch_id": "baseline-002",
+        "shared_history_fingerprint": "ancestor-001-fingerprint"
+      },
+      "expected_result": "DuplicateSharedHistoryFingerprint"
+    }
+  ]
+}
