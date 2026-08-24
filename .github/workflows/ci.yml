@@ -1,0 +1,20 @@
+name: M1A
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  domain-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run --frozen pytest
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen mypy
+      - run: uv run --frozen python fixtures/golden/validate_sales_fraud_v1.py

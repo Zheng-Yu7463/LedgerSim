@@ -1,40 +1,77 @@
 from __future__ import annotations
 
-import pytest
-
-from ledger_sim.domain.accounting import (
+from ledger_sim.domain.cases import (
     AccountingCaseError,
     AccountingCaseKey,
+    AccountingCaseRegistry,
     AccountingCaseStatus,
 )
-from ledger_sim.domain.cases import AccountingCaseRegistry
+from ledger_sim.domain.events import DomainEvent, FraudDecisionRecorded
+from ledger_sim.domain.values import DomainId, Instant, Money, deterministic_id
 
 CASE_KEY = "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
 
 
-def test_accounting_case_posts_once_reverses_once_and_reopens_idempotently() -> None:
+def _input_event() -> DomainEvent:
+    identifier = DomainId("event-1")
+    return DomainEvent(
+        event_id=identifier,
+        run_id=DomainId("run-golden-001"),
+        branch_id=DomainId("fraud-001"),
+        aggregate_id=DomainId("aggregate-1"),
+        sequence_in_commit=1,
+        committed_at=Instant.parse("2026-12-29T01:00:00.000000Z"),
+        actor_id=DomainId("actor-1"),
+        causation_id=DomainId("command-1"),
+        correlation_id=DomainId("correlation-1"),
+        payload=FraudDecisionRecorded(Money.parse("1.00"), "2026-12"),
+    )
+
+
+def test_accounting_case_rejects_premature_and_duplicate_lifecycle_actions() -> None:
     registry = AccountingCaseRegistry()
-    case = registry.open(AccountingCaseKey.parse(CASE_KEY))
-    assert registry.open(case.key) is case
-    assert case.status is AccountingCaseStatus.PENDING
+    case, created = registry.open(AccountingCaseKey.parse(CASE_KEY), ("source",))
+    assert created
+    journal_id = deterministic_id("journal", case.key, "recognition")
 
-    assert case.observe("evt-fraud-003", "shipment_record")
-    assert not case.observe("evt-fraud-003", "shipment_record")
-    case.post("journal-report-fraud-revenue-001")
-    case.post("journal-report-fraud-revenue-001")
-    assert case.status is AccountingCaseStatus.POSTED
+    try:
+        case.post(journal_id)
+    except AccountingCaseError as error:
+        assert "before all required roles" in str(error)
+    else:
+        raise AssertionError("premature post was accepted")
 
-    case.reverse("journal-reversal-001")
+    assert case.observe("source", _input_event())
+    assert case.post(journal_id)
+    assert not case.post(journal_id)
+
+    try:
+        case.post(DomainId("different-journal"))
+    except AccountingCaseError as error:
+        assert "already posted" in str(error)
+    else:
+        raise AssertionError("duplicate post with another journal was accepted")
+
+    assert case.reverse(DomainId("reversal-1"))
     assert case.status is AccountingCaseStatus.REVERSED
-    with pytest.raises(AccountingCaseError, match="AlreadyReversed"):
-        case.reverse("journal-reversal-002")
-
-    successor = registry.open_next(case)
-    assert successor.key.recognition_cycle == 2
-    assert successor.status is AccountingCaseStatus.PENDING
-    assert registry.open_next(case) is successor
+    try:
+        case.post(journal_id)
+    except AccountingCaseError as error:
+        assert "reversed" in str(error)
+    else:
+        raise AssertionError("reversed accounting case was posted again")
+    try:
+        case.reverse(DomainId("reversal-2"))
+    except AccountingCaseError as error:
+        assert "AlreadyReversed" in str(error)
+    else:
+        raise AssertionError("duplicate reversal was accepted")
 
 
 def test_malformed_case_key_is_rejected() -> None:
-    with pytest.raises(AccountingCaseError):
+    try:
         AccountingCaseKey.parse("too|short")
+    except AccountingCaseError:
+        pass
+    else:
+        raise AssertionError("malformed accounting case key was accepted")

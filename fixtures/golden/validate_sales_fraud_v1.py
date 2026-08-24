@@ -168,10 +168,18 @@ def validate_references_and_uniqueness(fixture: dict) -> None:
     if ordinary_visibility_ids != set(label_ids):
         raise AssertionError("ordinary-business visibility must cover every labeled object")
 
+    fraud_decision_ids = [
+        event["event_id"]
+        for step in fixture["steps"]
+        for event in step["expected_events"]
+        if event["event_type"] == "FraudDecisionRecorded"
+    ]
+    if len(fraud_decision_ids) != 1:
+        raise AssertionError("fixture must contain exactly one fraud decision event")
     fraud_decision_visibility = {
         item["observer_profile_id"]: item["access_status"]
         for item in fixture["visibility_expectations"]
-        if item["object_id"] == "evt-fraud-001"
+        if item["object_id"] == fraud_decision_ids[0]
     }
     if fraud_decision_visibility != {
         "ordinary_business_v1": "restricted",

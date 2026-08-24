@@ -3,6 +3,7 @@
   "schema_version": "1.0.0",
   "fixture_id": "sales-fraud-v1",
   "run_id": "run-golden-001",
+  "fork_after_step_id": "common-007",
   "description": "Executable oracle for a normal sale and a paired year-end fictitious sale.",
   "currency": "CNY",
   "timezone": "Asia/Shanghai",
@@ -188,7 +189,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-001",
+          "event_id": "4d2329c2-5059-5adc-91c0-f13a096ae46d",
           "event_type": "CustomerCommitmentEstablished",
           "aggregate_id": "commitment-common-001",
           "sequence_in_commit": 1,
@@ -234,7 +235,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-002",
+          "event_id": "42427b5e-8173-5c00-a5af-41b76ae7b42b",
           "event_type": "SalesOrderCreated",
           "aggregate_id": "sales-chain-common-001",
           "sequence_in_commit": 1,
@@ -243,40 +244,43 @@
             "claimed_commitment_id": "commitment-common-001",
             "quantity": "50.0000",
             "unit_price": "120.0000",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         },
         {
-          "event_id": "evt-common-case-001",
+          "event_id": "7cf5367d-0e77-501a-9081-ce89a5be726c",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-common-revenue-001",
+          "aggregate_id": "0b005ecb-dcdd-5931-aca3-9ef195a164e0",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1"
           }
         },
         {
-          "event_id": "evt-common-case-002",
+          "event_id": "01adf882-312c-5713-942f-d38978b6f2fc",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-common-cogs-001",
+          "aggregate_id": "94f329ba-5cd5-53d0-bc80-d091095fb243",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1"
           }
         },
         {
-          "event_id": "evt-common-case-003",
+          "event_id": "f6f76ebf-0255-5e65-b1e8-30af48738813",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-common-revenue-001",
+          "aggregate_id": "7fd1196b-ce77-5ea5-b1ae-20c0819ec530",
           "sequence_in_commit": 4,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1"
           }
         },
         {
-          "event_id": "evt-common-case-004",
+          "event_id": "7346953e-e14e-5d11-bcf9-b4101d7d75e4",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-common-cogs-001",
+          "aggregate_id": "2af5f600-0e90-51a1-8e5c-7c8c48d0275a",
           "sequence_in_commit": 5,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1"
@@ -312,7 +316,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-003",
+          "event_id": "f7c6803f-7d6a-5fee-97c6-c3dde75e3260",
           "event_type": "PhysicalGoodsDispatched",
           "aggregate_id": "fulfillment-common-001",
           "sequence_in_commit": 1,
@@ -321,32 +325,32 @@
             "commitment_id": "commitment-common-001",
             "quantity": "50.0000",
             "dispatched_at": "2026-03-02T02:00:00.000000Z",
-            "normative_cost_snapshot_id": "cost-norm-common-001",
+            "normative_cost_snapshot_id": "16331625-f540-591a-b10c-320ed92ae6fb",
             "unit_cost": "80.000000"
           }
         },
         {
-          "event_id": "evt-common-004",
+          "event_id": "f69dbf35-d1cc-5db3-8ba1-e202523a807e",
           "event_type": "ControlTransferred",
           "aggregate_id": "commitment-common-001",
           "sequence_in_commit": 2,
           "payload": {
             "business_chain_id": "sales-chain-common-001",
             "commitment_id": "commitment-common-001",
-            "dispatch_event_id": "evt-common-003",
+            "dispatch_event_id": "f7c6803f-7d6a-5fee-97c6-c3dde75e3260",
             "quantity": "50.0000"
           }
         },
         {
-          "event_id": "evt-common-005",
+          "event_id": "1ffb1d02-0f11-5ca0-bf7f-47dea6962982",
           "event_type": "SettlementRightEstablished",
           "aggregate_id": "commitment-common-001",
           "sequence_in_commit": 3,
           "payload": {
-            "settlement_right_id": "settlement-right-common-001",
+            "settlement_right_id": "68f72394-aa07-5071-aca9-0aaeae20efe9",
             "business_chain_id": "sales-chain-common-001",
             "commitment_id": "commitment-common-001",
-            "control_event_id": "evt-common-004",
+            "control_event_id": "f69dbf35-d1cc-5db3-8ba1-e202523a807e",
             "customer_id": "customer-001",
             "product_id": "product-001",
             "quantity": "50.0000",
@@ -355,23 +359,23 @@
           }
         },
         {
-          "event_id": "evt-common-006",
+          "event_id": "547ee77f-67cc-5607-a4ae-2e920908faeb",
           "event_type": "NormativeJournalPosted",
-          "aggregate_id": "journal-norm-common-revenue-001",
+          "aggregate_id": "12322580-8a30-59dc-b3e6-4f0766044cf8",
           "sequence_in_commit": 4,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1",
-            "journal_id": "journal-norm-common-revenue-001"
+            "journal_id": "12322580-8a30-59dc-b3e6-4f0766044cf8"
           }
         },
         {
-          "event_id": "evt-common-007",
+          "event_id": "fbb22d3f-0dc1-570b-ab5f-13ca5b2a027f",
           "event_type": "NormativeJournalPosted",
-          "aggregate_id": "journal-norm-common-cogs-001",
+          "aggregate_id": "27348e84-18ac-521f-bc5a-777c6bb78fe9",
           "sequence_in_commit": 5,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1",
-            "journal_id": "journal-norm-common-cogs-001"
+            "journal_id": "27348e84-18ac-521f-bc5a-777c6bb78fe9"
           }
         }
       ],
@@ -402,7 +406,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-008",
+          "event_id": "a1405f3f-0c41-557f-b0b7-98830a553e36",
           "event_type": "ShipmentRecordAccepted",
           "aggregate_id": "shipment-common-001",
           "sequence_in_commit": 1,
@@ -410,8 +414,11 @@
             "business_chain_id": "sales-chain-common-001",
             "quantity": "50.0000",
             "claimed_effective_at": "2026-03-02T02:00:00.000000Z",
-            "reported_cost_snapshot_id": "cost-report-common-001",
-            "unit_cost": "80.000000"
+            "reported_cost_snapshot_id": "9525b89c-279e-5f4f-a225-5b477db08833",
+            "unit_cost": "80.000000",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         }
       ],
@@ -446,7 +453,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-009",
+          "event_id": "61bbbc06-fe5d-5bc2-9865-01669d9f24d1",
           "event_type": "SalesInvoiceIssued",
           "aggregate_id": "invoice-common-001",
           "sequence_in_commit": 1,
@@ -454,27 +461,33 @@
             "business_chain_id": "sales-chain-common-001",
             "quantity": "50.0000",
             "net_amount": "6000.00",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "unit_price": "120.0000",
+            "tax_amount": "0.00",
+            "invoice_date": "2026-03-02"
           }
         },
         {
-          "event_id": "evt-common-010",
+          "event_id": "e43302d3-1ec7-5fc5-9025-4bffe40a746d",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-common-revenue-001",
+          "aggregate_id": "3e161b2e-f74e-5c86-a55b-3c60cf279a87",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1",
-            "journal_id": "journal-report-common-revenue-001"
+            "journal_id": "3e161b2e-f74e-5c86-a55b-3c60cf279a87"
           }
         },
         {
-          "event_id": "evt-common-011",
+          "event_id": "85ba672e-28c2-5397-b022-2e862d613bac",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-common-cogs-001",
+          "aggregate_id": "111500a0-5e2c-5808-ae22-98527135f681",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1",
-            "journal_id": "journal-report-common-cogs-001"
+            "journal_id": "111500a0-5e2c-5808-ae22-98527135f681"
           }
         }
       ],
@@ -496,7 +509,7 @@
         "business_chain_id": "sales-chain-common-001",
         "correlation_id": "corr-common-sale-001",
         "payload": {
-          "settlement_right_id": "settlement-right-common-001",
+          "settlement_right_id": "68f72394-aa07-5071-aca9-0aaeae20efe9",
           "bank_account_id": "bank-001",
           "amount": "6000.00",
           "currency": "CNY"
@@ -504,26 +517,27 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-012",
+          "event_id": "7a67cd89-d207-5f39-a6eb-8fa5bfbf41c4",
           "event_type": "CustomerPaymentReceived",
           "aggregate_id": "payment-common-001",
           "sequence_in_commit": 1,
           "payload": {
             "business_chain_id": "sales-chain-common-001",
-            "settlement_right_id": "settlement-right-common-001",
-            "settlement_right_event_id": "evt-common-005",
+            "settlement_right_id": "68f72394-aa07-5071-aca9-0aaeae20efe9",
+            "settlement_right_event_id": "1ffb1d02-0f11-5ca0-bf7f-47dea6962982",
             "amount": "6000.00",
-            "currency": "CNY"
+            "currency": "CNY",
+            "bank_account_id": "bank-001"
           }
         },
         {
-          "event_id": "evt-common-013",
+          "event_id": "f97f0524-2510-5049-988d-6b74cb49d3a6",
           "event_type": "NormativeJournalPosted",
-          "aggregate_id": "journal-norm-common-payment-001",
+          "aggregate_id": "e360c535-e9aa-5929-a102-b8dae94065fc",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_customer_payment_v1|sales-chain-common-001|1",
-            "journal_id": "journal-norm-common-payment-001"
+            "journal_id": "e360c535-e9aa-5929-a102-b8dae94065fc"
           }
         }
       ],
@@ -553,7 +567,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-common-014",
+          "event_id": "3f1f0f99-0bdd-527b-9bcd-b0e9b87827e1",
           "event_type": "CustomerReceiptRecorded",
           "aggregate_id": "receipt-common-001",
           "sequence_in_commit": 1,
@@ -561,17 +575,18 @@
             "business_chain_id": "sales-chain-common-001",
             "invoice_id": "invoice-common-001",
             "amount": "6000.00",
-            "currency": "CNY"
+            "currency": "CNY",
+            "bank_account_id": "bank-001"
           }
         },
         {
-          "event_id": "evt-common-015",
+          "event_id": "3557fef9-c898-559d-b03e-a4aa3c970cb8",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-common-payment-001",
+          "aggregate_id": "e65e2ad6-c77d-5694-a243-46d748e6559e",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_customer_payment_v1|sales-chain-common-001|1",
-            "journal_id": "journal-report-common-payment-001"
+            "journal_id": "e65e2ad6-c77d-5694-a243-46d748e6559e"
           }
         }
       ],
@@ -605,7 +620,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-baseline-001",
+          "event_id": "7ddb415f-adb5-547c-9d37-72254c4554d5",
           "event_type": "CustomerCommitmentEstablished",
           "aggregate_id": "commitment-year-end-001",
           "sequence_in_commit": 1,
@@ -651,7 +666,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-baseline-002",
+          "event_id": "ad635c81-35cb-5437-ad4f-5f8f49c0aa0d",
           "event_type": "SalesOrderCreated",
           "aggregate_id": "sales-chain-year-end-001",
           "sequence_in_commit": 1,
@@ -660,40 +675,43 @@
             "claimed_commitment_id": "commitment-year-end-001",
             "quantity": "100.0000",
             "unit_price": "120.0000",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         },
         {
-          "event_id": "evt-baseline-case-001",
+          "event_id": "0949cc68-a00e-5588-8f9d-be5129af4894",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-baseline-revenue-001",
+          "aggregate_id": "40f2adc4-94b5-5065-9621-dcfcd96b8991",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-baseline-case-002",
+          "event_id": "bd70a12a-8084-5e4c-a3a5-c3f541c73d85",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-baseline-cogs-001",
+          "aggregate_id": "406cf331-e9d5-5483-805b-6895e72aab72",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-baseline-case-003",
+          "event_id": "7422512b-9a51-53ce-8df7-ed27457d110b",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-baseline-revenue-001",
+          "aggregate_id": "858cfd51-1315-5198-924f-23be7fd2e91a",
           "sequence_in_commit": 4,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-baseline-case-004",
+          "event_id": "12130387-bfa1-5cc9-b9e4-6453242c8b79",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-baseline-cogs-001",
+          "aggregate_id": "88a06e5d-b198-5461-b67e-4959e8d25170",
           "sequence_in_commit": 5,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1"
@@ -729,7 +747,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-baseline-003",
+          "event_id": "52424e0d-28a6-51d6-bef4-44a3cf0b3593",
           "event_type": "PhysicalGoodsDispatched",
           "aggregate_id": "fulfillment-year-end-001",
           "sequence_in_commit": 1,
@@ -737,33 +755,33 @@
             "business_chain_id": "sales-chain-year-end-001",
             "commitment_id": "commitment-year-end-001",
             "quantity": "100.0000",
-            "normative_cost_snapshot_id": "cost-norm-year-end-001",
+            "normative_cost_snapshot_id": "9b0bc890-e6c5-5e96-9198-42c87bce70eb",
             "unit_cost": "80.000000",
             "dispatched_at": "2026-12-29T01:00:00.000000Z"
           }
         },
         {
-          "event_id": "evt-baseline-004",
+          "event_id": "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9",
           "event_type": "ControlTransferred",
           "aggregate_id": "commitment-year-end-001",
           "sequence_in_commit": 2,
           "payload": {
             "business_chain_id": "sales-chain-year-end-001",
             "commitment_id": "commitment-year-end-001",
-            "dispatch_event_id": "evt-baseline-003",
+            "dispatch_event_id": "52424e0d-28a6-51d6-bef4-44a3cf0b3593",
             "quantity": "100.0000"
           }
         },
         {
-          "event_id": "evt-baseline-005",
+          "event_id": "30a6ccb9-e427-5581-95b2-1487f3cfa1d8",
           "event_type": "SettlementRightEstablished",
           "aggregate_id": "commitment-year-end-001",
           "sequence_in_commit": 3,
           "payload": {
-            "settlement_right_id": "settlement-right-year-end-001",
+            "settlement_right_id": "fb91e051-8840-510b-b58d-d78b1da4108c",
             "business_chain_id": "sales-chain-year-end-001",
             "commitment_id": "commitment-year-end-001",
-            "control_event_id": "evt-baseline-004",
+            "control_event_id": "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9",
             "customer_id": "customer-001",
             "product_id": "product-001",
             "quantity": "100.0000",
@@ -772,23 +790,23 @@
           }
         },
         {
-          "event_id": "evt-baseline-006",
+          "event_id": "ba4da08f-a825-5672-aaf7-7d47820dddc4",
           "event_type": "NormativeJournalPosted",
-          "aggregate_id": "journal-norm-baseline-revenue-001",
+          "aggregate_id": "bf57921e-dbf4-5e77-9c45-00a94d7b8fe9",
           "sequence_in_commit": 4,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-norm-baseline-revenue-001"
+            "journal_id": "bf57921e-dbf4-5e77-9c45-00a94d7b8fe9"
           }
         },
         {
-          "event_id": "evt-baseline-007",
+          "event_id": "1950ab29-ec6c-5bc0-a5c4-a07bfcd68f92",
           "event_type": "NormativeJournalPosted",
-          "aggregate_id": "journal-norm-baseline-cogs-001",
+          "aggregate_id": "a6a09a3a-02f5-5329-9cd0-3999cdebb902",
           "sequence_in_commit": 5,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-norm-baseline-cogs-001"
+            "journal_id": "a6a09a3a-02f5-5329-9cd0-3999cdebb902"
           }
         }
       ],
@@ -819,7 +837,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-baseline-008",
+          "event_id": "4372d2de-0801-5a76-8533-4f3618550c9c",
           "event_type": "ShipmentRecordAccepted",
           "aggregate_id": "shipment-year-end-001",
           "sequence_in_commit": 1,
@@ -827,8 +845,11 @@
             "business_chain_id": "sales-chain-year-end-001",
             "quantity": "100.0000",
             "claimed_effective_at": "2026-12-29T01:00:00.000000Z",
-            "reported_cost_snapshot_id": "cost-report-year-end-001",
-            "unit_cost": "80.000000"
+            "reported_cost_snapshot_id": "3115c5ac-6765-57dc-997d-6785e818e6a2",
+            "unit_cost": "80.000000",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         }
       ],
@@ -863,7 +884,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-baseline-009",
+          "event_id": "f427286a-c62c-5f7a-9e98-317fefa16590",
           "event_type": "SalesInvoiceIssued",
           "aggregate_id": "invoice-year-end-001",
           "sequence_in_commit": 1,
@@ -871,27 +892,33 @@
             "business_chain_id": "sales-chain-year-end-001",
             "quantity": "100.0000",
             "net_amount": "12000.00",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "unit_price": "120.0000",
+            "tax_amount": "0.00",
+            "invoice_date": "2026-12-29"
           }
         },
         {
-          "event_id": "evt-baseline-010",
+          "event_id": "e5b1048c-5eca-5ee3-bdbe-39b1446f38ca",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-baseline-revenue-001",
+          "aggregate_id": "b0a4d361-51ad-5cf9-bd4c-e8edc3c81e57",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-report-baseline-revenue-001"
+            "journal_id": "b0a4d361-51ad-5cf9-bd4c-e8edc3c81e57"
           }
         },
         {
-          "event_id": "evt-baseline-011",
+          "event_id": "4a274968-89d7-5bf6-b0c8-3b4e2d59248f",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-baseline-cogs-001",
+          "aggregate_id": "46bb9062-dbbe-51c7-b29b-e30a8d824a90",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-report-baseline-cogs-001"
+            "journal_id": "46bb9062-dbbe-51c7-b29b-e30a8d824a90"
           }
         }
       ],
@@ -919,7 +946,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-fraud-001",
+          "event_id": "23658975-2920-5d8a-95ba-79052fd82536",
           "event_type": "FraudDecisionRecorded",
           "aggregate_id": "fraud-decision-001",
           "sequence_in_commit": 1,
@@ -958,7 +985,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-fraud-002",
+          "event_id": "408dffa0-9cb1-51c2-a80a-fadb947b2fe2",
           "event_type": "SalesOrderCreated",
           "aggregate_id": "sales-chain-year-end-001",
           "sequence_in_commit": 1,
@@ -967,40 +994,43 @@
             "claimed_commitment_id": "commitment-year-end-001",
             "quantity": "100.0000",
             "unit_price": "120.0000",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         },
         {
-          "event_id": "evt-fraud-case-001",
+          "event_id": "c36fe5e1-2ceb-5b11-9e27-9986d4680bd3",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-fraud-revenue-001",
+          "aggregate_id": "589590cc-ca1a-5701-b241-6040e75edeec",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-fraud-case-002",
+          "event_id": "22f7aa71-647c-52b2-9ba3-806f7f886d83",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-report-fraud-cogs-001",
+          "aggregate_id": "57bed321-ddf6-5d6c-a4db-f493548ba25f",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-fraud-case-003",
+          "event_id": "b777250b-90cd-50a1-9016-26b76e573dfc",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-fraud-revenue-001",
+          "aggregate_id": "a25c5d4a-bd48-5969-bf2d-1ffcf27611dc",
           "sequence_in_commit": 4,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1"
           }
         },
         {
-          "event_id": "evt-fraud-case-004",
+          "event_id": "74831467-d9bf-513b-aa22-9949968d90f3",
           "event_type": "AccountingCaseOpened",
-          "aggregate_id": "case-norm-fraud-cogs-001",
+          "aggregate_id": "97eddebf-0a4d-537a-a3e5-2dfb13befc70",
           "sequence_in_commit": 5,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1"
@@ -1034,7 +1064,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-fraud-003",
+          "event_id": "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
           "event_type": "ShipmentRecordAccepted",
           "aggregate_id": "shipment-year-end-001",
           "sequence_in_commit": 1,
@@ -1042,8 +1072,11 @@
             "business_chain_id": "sales-chain-year-end-001",
             "quantity": "100.0000",
             "claimed_effective_at": "2026-12-29T01:00:00.000000Z",
-            "reported_cost_snapshot_id": "cost-report-year-end-001",
-            "unit_cost": "80.000000"
+            "reported_cost_snapshot_id": "b2abd4f8-0f13-5e21-9ac8-50f43401e94c",
+            "unit_cost": "80.000000",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001"
           }
         }
       ],
@@ -1078,7 +1111,7 @@
       },
       "expected_events": [
         {
-          "event_id": "evt-fraud-004",
+          "event_id": "67b4e9b5-b7a9-5c40-b9ba-31133cadd068",
           "event_type": "SalesInvoiceIssued",
           "aggregate_id": "invoice-year-end-001",
           "sequence_in_commit": 1,
@@ -1086,27 +1119,33 @@
             "business_chain_id": "sales-chain-year-end-001",
             "quantity": "100.0000",
             "net_amount": "12000.00",
-            "currency": "CNY"
+            "currency": "CNY",
+            "company_id": "company-001",
+            "customer_id": "customer-001",
+            "product_id": "product-001",
+            "unit_price": "120.0000",
+            "tax_amount": "0.00",
+            "invoice_date": "2026-12-29"
           }
         },
         {
-          "event_id": "evt-fraud-005",
+          "event_id": "f8f24abd-5e16-5939-840a-415162d72703",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-fraud-revenue-001",
+          "aggregate_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24",
           "sequence_in_commit": 2,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-report-fraud-revenue-001"
+            "journal_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24"
           }
         },
         {
-          "event_id": "evt-fraud-006",
+          "event_id": "faa4bd13-36a2-58b3-833a-ec5fcec095cb",
           "event_type": "ReportedJournalPosted",
-          "aggregate_id": "journal-report-fraud-cogs-001",
+          "aggregate_id": "dd47d4ef-8854-5253-a5db-db5a5759ca83",
           "sequence_in_commit": 3,
           "payload": {
             "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
-            "journal_id": "journal-report-fraud-cogs-001"
+            "journal_id": "dd47d4ef-8854-5253-a5db-db5a5759ca83"
           }
         }
       ],
@@ -1193,7 +1232,7 @@
           "commitment-common-001"
         ],
         "settlement_rights": [
-          "settlement-right-common-001"
+          "68f72394-aa07-5071-aca9-0aaeae20efe9"
         ],
         "bank": "34000.00"
       },
@@ -1232,7 +1271,7 @@
           "commitment-common-001"
         ],
         "settlement_rights": [
-          "settlement-right-common-001"
+          "68f72394-aa07-5071-aca9-0aaeae20efe9"
         ],
         "bank": "34000.00"
       },
@@ -1273,7 +1312,7 @@
           "commitment-common-001"
         ],
         "settlement_rights": [
-          "settlement-right-common-001"
+          "68f72394-aa07-5071-aca9-0aaeae20efe9"
         ],
         "bank": "34000.00"
       },
@@ -1490,7 +1529,7 @@
           "commitment-year-end-001"
         ],
         "settlement_rights": [
-          "settlement-right-year-end-001"
+          "fb91e051-8840-510b-b58d-d78b1da4108c"
         ],
         "bank": "40000.00"
       },
@@ -1537,7 +1576,7 @@
           "commitment-year-end-001"
         ],
         "settlement_rights": [
-          "settlement-right-year-end-001"
+          "fb91e051-8840-510b-b58d-d78b1da4108c"
         ],
         "bank": "40000.00"
       },
@@ -1585,7 +1624,7 @@
           "commitment-year-end-001"
         ],
         "settlement_rights": [
-          "settlement-right-year-end-001"
+          "fb91e051-8840-510b-b58d-d78b1da4108c"
         ],
         "bank": "40000.00"
       },
@@ -1827,12 +1866,12 @@
   },
   "journals": [
     {
-      "journal_id": "journal-norm-common-revenue-001",
+      "journal_id": "12322580-8a30-59dc-b3e6-4f0766044cf8",
       "ledger_type": "normative",
       "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_revenue_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-004",
-        "evt-common-005"
+        "f69dbf35-d1cc-5db3-8ba1-e202523a807e",
+        "1ffb1d02-0f11-5ca0-bf7f-47dea6962982"
       ],
       "input_lineage": [
         {
@@ -1849,13 +1888,13 @@
       "lineage_digest": "3a5a57178d3a51ff8f09e0be3a4767097cf378393eade9d56727635dda2a8668",
       "lines": [
         {
-          "line_id": "line-norm-common-revenue-001",
+          "line_id": "15707c5e-35c8-57c4-9329-ad7820896b4b",
           "account": "accounts_receivable",
           "debit_amount": "6000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-norm-common-revenue-002",
+          "line_id": "e9340f90-d7f9-5527-85c6-770f82d99402",
           "account": "sales_revenue",
           "debit_amount": "0.00",
           "credit_amount": "6000.00"
@@ -1863,12 +1902,12 @@
       ]
     },
     {
-      "journal_id": "journal-norm-common-cogs-001",
+      "journal_id": "27348e84-18ac-521f-bc5a-777c6bb78fe9",
       "ledger_type": "normative",
       "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_sales_cogs_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-004",
-        "evt-common-005"
+        "f69dbf35-d1cc-5db3-8ba1-e202523a807e",
+        "1ffb1d02-0f11-5ca0-bf7f-47dea6962982"
       ],
       "input_lineage": [
         {
@@ -1885,13 +1924,13 @@
       "lineage_digest": "3a5a57178d3a51ff8f09e0be3a4767097cf378393eade9d56727635dda2a8668",
       "lines": [
         {
-          "line_id": "line-norm-common-cogs-001",
+          "line_id": "facb2389-856f-5b06-9c69-30439a8d4c34",
           "account": "cost_of_goods_sold",
           "debit_amount": "4000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-norm-common-cogs-002",
+          "line_id": "f13e3e9e-9ed5-57bb-9ab5-fafa7b290a73",
           "account": "inventory",
           "debit_amount": "0.00",
           "credit_amount": "4000.00"
@@ -1899,12 +1938,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-common-revenue-001",
+      "journal_id": "3e161b2e-f74e-5c86-a55b-3c60cf279a87",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_revenue_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-008",
-        "evt-common-009"
+        "a1405f3f-0c41-557f-b0b7-98830a553e36",
+        "61bbbc06-fe5d-5bc2-9865-01669d9f24d1"
       ],
       "input_lineage": [
         {
@@ -1921,13 +1960,13 @@
       "lineage_digest": "47076e8a9eacb45622edfd8a1100558da198a68008cd536a792fe92915b05609",
       "lines": [
         {
-          "line_id": "line-report-common-revenue-001",
+          "line_id": "6cbf35d0-5c04-5f22-a73a-cc125ecceb02",
           "account": "accounts_receivable",
           "debit_amount": "6000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-common-revenue-002",
+          "line_id": "b0f01e2d-4ff0-556c-b82c-c8da650a14d3",
           "account": "sales_revenue",
           "debit_amount": "0.00",
           "credit_amount": "6000.00"
@@ -1935,12 +1974,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-common-cogs-001",
+      "journal_id": "111500a0-5e2c-5808-ae22-98527135f681",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_sales_cogs_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-008",
-        "evt-common-009"
+        "a1405f3f-0c41-557f-b0b7-98830a553e36",
+        "61bbbc06-fe5d-5bc2-9865-01669d9f24d1"
       ],
       "input_lineage": [
         {
@@ -1957,13 +1996,13 @@
       "lineage_digest": "47076e8a9eacb45622edfd8a1100558da198a68008cd536a792fe92915b05609",
       "lines": [
         {
-          "line_id": "line-report-common-cogs-001",
+          "line_id": "7f737a99-d92d-58a0-b392-c852c74d2880",
           "account": "cost_of_goods_sold",
           "debit_amount": "4000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-common-cogs-002",
+          "line_id": "9cde3fd2-0de9-5ff5-a659-2e7bf8daf14d",
           "account": "inventory",
           "debit_amount": "0.00",
           "credit_amount": "4000.00"
@@ -1971,11 +2010,11 @@
       ]
     },
     {
-      "journal_id": "journal-norm-common-payment-001",
+      "journal_id": "e360c535-e9aa-5929-a102-b8dae94065fc",
       "ledger_type": "normative",
       "accounting_case_key": "run-golden-001|ancestor-001|normative|normative_customer_payment_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-012"
+        "7a67cd89-d207-5f39-a6eb-8fa5bfbf41c4"
       ],
       "input_lineage": [
         {
@@ -1988,13 +2027,13 @@
       "lineage_digest": "9b811e930cf37955d5aa7411b6f244d5e89142e052e9b4e5991d0bac1a885204",
       "lines": [
         {
-          "line_id": "line-norm-common-payment-001",
+          "line_id": "07a922a0-675f-54d6-8a49-a6eb342015b3",
           "account": "bank",
           "debit_amount": "6000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-norm-common-payment-002",
+          "line_id": "bc375ed5-6558-5125-85d8-989b2ea1b234",
           "account": "accounts_receivable",
           "debit_amount": "0.00",
           "credit_amount": "6000.00"
@@ -2002,11 +2041,11 @@
       ]
     },
     {
-      "journal_id": "journal-report-common-payment-001",
+      "journal_id": "e65e2ad6-c77d-5694-a243-46d748e6559e",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|ancestor-001|reported|reported_customer_payment_v1|sales-chain-common-001|1",
       "input_event_ids": [
-        "evt-common-014"
+        "3f1f0f99-0bdd-527b-9bcd-b0e9b87827e1"
       ],
       "input_lineage": [
         {
@@ -2019,13 +2058,13 @@
       "lineage_digest": "d06c52efe99a88f45b007f3989e85eaa7b744e70d99f0696961e1837379efeee",
       "lines": [
         {
-          "line_id": "line-report-common-payment-001",
+          "line_id": "fc8a8a38-2c13-5eb2-b9ea-c3400b13c5f2",
           "account": "bank",
           "debit_amount": "6000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-common-payment-002",
+          "line_id": "df5f3f08-8905-5478-a67f-46a56e1d7fd8",
           "account": "accounts_receivable",
           "debit_amount": "0.00",
           "credit_amount": "6000.00"
@@ -2033,12 +2072,12 @@
       ]
     },
     {
-      "journal_id": "journal-norm-baseline-revenue-001",
+      "journal_id": "bf57921e-dbf4-5e77-9c45-00a94d7b8fe9",
       "ledger_type": "normative",
       "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_revenue_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-baseline-004",
-        "evt-baseline-005"
+        "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9",
+        "30a6ccb9-e427-5581-95b2-1487f3cfa1d8"
       ],
       "input_lineage": [
         {
@@ -2055,13 +2094,13 @@
       "lineage_digest": "b542e54337948fb1d1b9887f1186bfcc3d18948ec759968e5b7b9cf1e79e0562",
       "lines": [
         {
-          "line_id": "line-norm-baseline-revenue-001",
+          "line_id": "8653e11d-13ff-5a3f-b7c1-646ffeb91efe",
           "account": "accounts_receivable",
           "debit_amount": "12000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-norm-baseline-revenue-002",
+          "line_id": "dd3152a3-a144-5417-8378-adb2257eea10",
           "account": "sales_revenue",
           "debit_amount": "0.00",
           "credit_amount": "12000.00"
@@ -2069,12 +2108,12 @@
       ]
     },
     {
-      "journal_id": "journal-norm-baseline-cogs-001",
+      "journal_id": "a6a09a3a-02f5-5329-9cd0-3999cdebb902",
       "ledger_type": "normative",
       "accounting_case_key": "run-golden-001|baseline-001|normative|normative_sales_cogs_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-baseline-004",
-        "evt-baseline-005"
+        "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9",
+        "30a6ccb9-e427-5581-95b2-1487f3cfa1d8"
       ],
       "input_lineage": [
         {
@@ -2091,13 +2130,13 @@
       "lineage_digest": "b542e54337948fb1d1b9887f1186bfcc3d18948ec759968e5b7b9cf1e79e0562",
       "lines": [
         {
-          "line_id": "line-norm-baseline-cogs-001",
+          "line_id": "d9b38583-bc3a-5b9d-beb9-c8f8f8f5182e",
           "account": "cost_of_goods_sold",
           "debit_amount": "8000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-norm-baseline-cogs-002",
+          "line_id": "f7092588-cc83-5504-8538-b4c991d6df4a",
           "account": "inventory",
           "debit_amount": "0.00",
           "credit_amount": "8000.00"
@@ -2105,12 +2144,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-baseline-revenue-001",
+      "journal_id": "b0a4d361-51ad-5cf9-bd4c-e8edc3c81e57",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-baseline-008",
-        "evt-baseline-009"
+        "4372d2de-0801-5a76-8533-4f3618550c9c",
+        "f427286a-c62c-5f7a-9e98-317fefa16590"
       ],
       "input_lineage": [
         {
@@ -2127,13 +2166,13 @@
       "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
       "lines": [
         {
-          "line_id": "line-report-baseline-revenue-001",
+          "line_id": "33727b00-9bd9-5a21-a4e7-0663de9bbb4f",
           "account": "accounts_receivable",
           "debit_amount": "12000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-baseline-revenue-002",
+          "line_id": "8186f6e6-50da-5747-87d7-0d1627408532",
           "account": "sales_revenue",
           "debit_amount": "0.00",
           "credit_amount": "12000.00"
@@ -2141,12 +2180,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-baseline-cogs-001",
+      "journal_id": "46bb9062-dbbe-51c7-b29b-e30a8d824a90",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|baseline-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-baseline-008",
-        "evt-baseline-009"
+        "4372d2de-0801-5a76-8533-4f3618550c9c",
+        "f427286a-c62c-5f7a-9e98-317fefa16590"
       ],
       "input_lineage": [
         {
@@ -2163,13 +2202,13 @@
       "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
       "lines": [
         {
-          "line_id": "line-report-baseline-cogs-001",
+          "line_id": "cca01cfe-9424-5dda-911c-28c7d8550bfe",
           "account": "cost_of_goods_sold",
           "debit_amount": "8000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-baseline-cogs-002",
+          "line_id": "6711221c-6429-51d7-9ac5-db3d8e3d1bdd",
           "account": "inventory",
           "debit_amount": "0.00",
           "credit_amount": "8000.00"
@@ -2177,12 +2216,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-fraud-revenue-001",
+      "journal_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_revenue_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-fraud-003",
-        "evt-fraud-004"
+        "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
+        "67b4e9b5-b7a9-5c40-b9ba-31133cadd068"
       ],
       "input_lineage": [
         {
@@ -2199,13 +2238,13 @@
       "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
       "lines": [
         {
-          "line_id": "line-report-fraud-revenue-001",
+          "line_id": "a5d054b8-19a9-557f-9fb4-1acd8c161c6a",
           "account": "accounts_receivable",
           "debit_amount": "12000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-fraud-revenue-002",
+          "line_id": "252cb326-9c76-5dd8-a356-cdac5e3d256d",
           "account": "sales_revenue",
           "debit_amount": "0.00",
           "credit_amount": "12000.00"
@@ -2213,12 +2252,12 @@
       ]
     },
     {
-      "journal_id": "journal-report-fraud-cogs-001",
+      "journal_id": "dd47d4ef-8854-5253-a5db-db5a5759ca83",
       "ledger_type": "reported",
       "accounting_case_key": "run-golden-001|fraud-001|reported|reported_sales_cogs_v1|sales-chain-year-end-001|1",
       "input_event_ids": [
-        "evt-fraud-003",
-        "evt-fraud-004"
+        "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
+        "67b4e9b5-b7a9-5c40-b9ba-31133cadd068"
       ],
       "input_lineage": [
         {
@@ -2235,13 +2274,13 @@
       "lineage_digest": "9bb05f1513b79b36bad1952711caf2066bc5e43707b8916f2d42cd9db659a9a9",
       "lines": [
         {
-          "line_id": "line-report-fraud-cogs-001",
+          "line_id": "523e796e-648e-5e1d-8d83-c39de6a1b533",
           "account": "cost_of_goods_sold",
           "debit_amount": "8000.00",
           "credit_amount": "0.00"
         },
         {
-          "line_id": "line-report-fraud-cogs-002",
+          "line_id": "f307f235-1ff7-5eef-bdf6-7b64ead8464f",
           "account": "inventory",
           "debit_amount": "0.00",
           "credit_amount": "8000.00"
@@ -2299,70 +2338,70 @@
   ],
   "labels": [
     {
-      "object_id": "evt-fraud-001",
+      "object_id": "23658975-2920-5d8a-95ba-79052fd82536",
       "intent_class": "intentional",
       "record_truth_status": "not_applicable",
       "causal_role": "direct_action",
       "misstatement_status": "not_applicable"
     },
     {
-      "object_id": "evt-fraud-002",
-      "intent_class": "intentional",
-      "record_truth_status": "fabricated",
-      "causal_role": "direct_action",
-      "misstatement_status": "not_applicable"
-    },
-    {
-      "object_id": "evt-fraud-003",
+      "object_id": "408dffa0-9cb1-51c2-a80a-fadb947b2fe2",
       "intent_class": "intentional",
       "record_truth_status": "fabricated",
       "causal_role": "direct_action",
       "misstatement_status": "not_applicable"
     },
     {
-      "object_id": "evt-fraud-004",
+      "object_id": "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
       "intent_class": "intentional",
       "record_truth_status": "fabricated",
       "causal_role": "direct_action",
       "misstatement_status": "not_applicable"
     },
     {
-      "object_id": "journal-report-fraud-revenue-001",
+      "object_id": "67b4e9b5-b7a9-5c40-b9ba-31133cadd068",
+      "intent_class": "intentional",
+      "record_truth_status": "fabricated",
+      "causal_role": "direct_action",
+      "misstatement_status": "not_applicable"
+    },
+    {
+      "object_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
       "misstatement_status": "not_applicable"
     },
     {
-      "object_id": "line-report-fraud-revenue-001",
+      "object_id": "a5d054b8-19a9-557f-9fb4-1acd8c161c6a",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
       "misstatement_status": "overstated"
     },
     {
-      "object_id": "line-report-fraud-revenue-002",
+      "object_id": "252cb326-9c76-5dd8-a356-cdac5e3d256d",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
       "misstatement_status": "overstated"
     },
     {
-      "object_id": "journal-report-fraud-cogs-001",
+      "object_id": "dd47d4ef-8854-5253-a5db-db5a5759ca83",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
       "misstatement_status": "not_applicable"
     },
     {
-      "object_id": "line-report-fraud-cogs-001",
+      "object_id": "523e796e-648e-5e1d-8d83-c39de6a1b533",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
       "misstatement_status": "overstated"
     },
     {
-      "object_id": "line-report-fraud-cogs-002",
+      "object_id": "f307f235-1ff7-5eef-bdf6-7b64ead8464f",
       "intent_class": "not_applicable",
       "record_truth_status": "not_applicable",
       "causal_role": "downstream_effect",
@@ -2385,7 +2424,7 @@
   ],
   "visibility_expectations": [
     {
-      "object_id": "evt-fraud-001",
+      "object_id": "23658975-2920-5d8a-95ba-79052fd82536",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2393,7 +2432,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "evt-fraud-002",
+      "object_id": "408dffa0-9cb1-51c2-a80a-fadb947b2fe2",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2401,7 +2440,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "evt-fraud-003",
+      "object_id": "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2409,7 +2448,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "evt-fraud-004",
+      "object_id": "67b4e9b5-b7a9-5c40-b9ba-31133cadd068",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2417,7 +2456,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "evt-fraud-001",
+      "object_id": "23658975-2920-5d8a-95ba-79052fd82536",
       "observer_profile_id": "restricted_research_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2425,7 +2464,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "journal-report-fraud-revenue-001",
+      "object_id": "e5ef234d-8621-50ea-887f-0e66ceb40d24",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2433,7 +2472,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "line-report-fraud-revenue-001",
+      "object_id": "a5d054b8-19a9-557f-9fb4-1acd8c161c6a",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2441,7 +2480,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "line-report-fraud-revenue-002",
+      "object_id": "252cb326-9c76-5dd8-a356-cdac5e3d256d",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2449,7 +2488,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "journal-report-fraud-cogs-001",
+      "object_id": "dd47d4ef-8854-5253-a5db-db5a5759ca83",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2457,7 +2496,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "line-report-fraud-cogs-001",
+      "object_id": "523e796e-648e-5e1d-8d83-c39de6a1b533",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2465,7 +2504,7 @@
       "temporal_status": "available"
     },
     {
-      "object_id": "line-report-fraud-cogs-002",
+      "object_id": "f307f235-1ff7-5eef-bdf6-7b64ead8464f",
       "observer_profile_id": "ordinary_business_v1",
       "observation_cutoff": "2027-01-10T15:59:59.000000Z",
       "view_policy_version": "1",
@@ -2495,12 +2534,12 @@
         "name": "reported_inputs_shipment_then_invoice",
         "comparison_group": "reported_year_end",
         "event_refs": [
-          "evt-fraud-003",
-          "evt-fraud-004"
+          "0f68c54a-c622-5752-ba6d-2ec4fb022eb3",
+          "67b4e9b5-b7a9-5c40-b9ba-31133cadd068"
         ],
         "expected_journal_ids": [
-          "journal-report-fraud-revenue-001",
-          "journal-report-fraud-cogs-001"
+          "e5ef234d-8621-50ea-887f-0e66ceb40d24",
+          "dd47d4ef-8854-5253-a5db-db5a5759ca83"
         ],
         "expected_accounting_content_digest_equal": true,
         "expected_lineage_digest_equal": true
@@ -2509,12 +2548,12 @@
         "name": "reported_inputs_invoice_then_shipment",
         "comparison_group": "reported_year_end",
         "event_refs": [
-          "evt-fraud-004",
-          "evt-fraud-003"
+          "67b4e9b5-b7a9-5c40-b9ba-31133cadd068",
+          "0f68c54a-c622-5752-ba6d-2ec4fb022eb3"
         ],
         "expected_journal_ids": [
-          "journal-report-fraud-revenue-001",
-          "journal-report-fraud-cogs-001"
+          "e5ef234d-8621-50ea-887f-0e66ceb40d24",
+          "dd47d4ef-8854-5253-a5db-db5a5759ca83"
         ],
         "expected_accounting_content_digest_equal": true,
         "expected_lineage_digest_equal": true
@@ -2523,12 +2562,12 @@
         "name": "normative_inputs_control_then_right",
         "comparison_group": "normative_year_end",
         "event_refs": [
-          "evt-baseline-004",
-          "evt-baseline-005"
+          "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9",
+          "30a6ccb9-e427-5581-95b2-1487f3cfa1d8"
         ],
         "expected_journal_ids": [
-          "journal-norm-baseline-revenue-001",
-          "journal-norm-baseline-cogs-001"
+          "bf57921e-dbf4-5e77-9c45-00a94d7b8fe9",
+          "a6a09a3a-02f5-5329-9cd0-3999cdebb902"
         ],
         "expected_accounting_content_digest_equal": true,
         "expected_lineage_digest_equal": true
@@ -2537,12 +2576,12 @@
         "name": "normative_inputs_right_then_control",
         "comparison_group": "normative_year_end",
         "event_refs": [
-          "evt-baseline-005",
-          "evt-baseline-004"
+          "30a6ccb9-e427-5581-95b2-1487f3cfa1d8",
+          "a5b664b4-86b0-57ea-8fe7-7e15cf80dbc9"
         ],
         "expected_journal_ids": [
-          "journal-norm-baseline-revenue-001",
-          "journal-norm-baseline-cogs-001"
+          "bf57921e-dbf4-5e77-9c45-00a94d7b8fe9",
+          "a6a09a3a-02f5-5329-9cd0-3999cdebb902"
         ],
         "expected_accounting_content_digest_equal": true,
         "expected_lineage_digest_equal": true
@@ -2647,7 +2686,7 @@
       },
       "expected_state_digest": "57990eb4c8b4b0e3619d230791933e56a78fb5221d05eec6b052d9fb7ac5c625",
       "expected_decision_id": "post-fraud-collection|customer-001|2027-01|1",
-      "cause_event_id": "evt-fraud-001",
+      "cause_event_id": "23658975-2920-5d8a-95ba-79052fd82536",
       "causal_ancestor_semantic_keys": [
         "fraud-decision|management-employee-001|2026-12|12000.00"
       ],

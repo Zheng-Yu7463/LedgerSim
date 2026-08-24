@@ -1,20 +1,22 @@
-"""Canonical command fingerprints and in-memory idempotency semantics."""
+"""Canonical typed-command fingerprints and in-memory idempotency semantics."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+
+from ledger_sim.domain.commands import Command, command_primitive
+from ledger_sim.domain.values import DomainId
 
 
 class CommandIdConflict(ValueError):
     pass
 
 
-def canonical_request(command: Mapping[str, Any]) -> bytes:
-    semantic_request = {key: value for key, value in command.items() if key != "command_id"}
+def canonical_request(command: Command) -> bytes:
+    semantic_request = command_primitive(command)
+    del semantic_request["command_id"]
     return json.dumps(
         semantic_request,
         ensure_ascii=False,
@@ -23,40 +25,34 @@ def canonical_request(command: Mapping[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def request_fingerprint(command: Mapping[str, Any]) -> str:
+def request_fingerprint(command: Command) -> str:
     return hashlib.sha256(canonical_request(command)).hexdigest()
 
 
+
 @dataclass(frozen=True, slots=True)
-class CommandResult:
+class RegisteredResult[ResultT]:
     fingerprint: str
-    event_count: int
-    journal_count: int
+    result: ResultT
 
 
-class IdempotencyRegistry:
+class IdempotencyRegistry[ResultT]:
     def __init__(self) -> None:
-        self._results: dict[str, CommandResult] = {}
+        self._results: dict[DomainId, RegisteredResult[ResultT]] = {}
 
-    def record(
-        self,
-        command: Mapping[str, Any],
-        *,
-        event_count: int,
-        journal_count: int,
-    ) -> CommandResult:
-        command_id = str(command["command_id"])
+    def find(self, command: Command) -> ResultT | None:
         fingerprint = request_fingerprint(command)
-        existing = self._results.get(command_id)
-        if existing is not None:
-            if existing.fingerprint != fingerprint:
-                raise CommandIdConflict(command_id)
-            return existing
+        existing = self._results.get(command.command_id)
+        if existing is None:
+            return None
+        if existing.fingerprint != fingerprint:
+            raise CommandIdConflict(str(command.command_id))
+        return existing.result
 
-        result = CommandResult(
-            fingerprint=fingerprint,
-            event_count=event_count,
-            journal_count=journal_count,
+    def register(self, command: Command, result: ResultT) -> None:
+        if command.command_id in self._results:
+            raise RuntimeError("command result was already registered")
+        self._results[command.command_id] = RegisteredResult(
+            request_fingerprint(command),
+            result,
         )
-        self._results[command_id] = result
-        return result
